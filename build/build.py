@@ -92,7 +92,32 @@ for s in C.columns:
     stocks.append(x)
 b=breadth.iloc[-120:]
 bt=dict(breadth=[r2(v) for v in b],bavg=[r2(v) for v in bavg.iloc[-120:]],rising=rising,bnow=round(float(breadth.iloc[-1]),1),nrank=len(sc))
-out=dict(asof=f"{asof:%d %b %Y}",built=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'),dates=[f"{d:%Y-%m-%d}" for d in C.index[-120:]],stocks=stocks,bt=bt)
+SC={}; scasof=None
+fp=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','fundamentals.csv')
+if os.path.exists(fp):
+    try:
+        q=pd.read_csv(fp); norm=lambda c: re.sub(r'[^a-z0-9]','',str(c).lower()); cm={norm(c):c for c in q.columns}
+        def col(*pats):
+            for p in pats:
+                for k,c in cm.items():
+                    if re.search(p,k): return c
+        M=dict(sym=col(r'^nsecode$',r'^symbol$',r'^nsesymbol$'),mcap=col(r'^marketcap'),pe=col(r'^pricetoearning',r'^pe$'),roe=col(r'^returnonequity',r'^roe'),roce=col(r'^returnoncapital',r'^roce'),de=col(r'^debttoequity'),s3=col(r'^salesgrowth3'),p3=col(r'^profitgrowth3'),npg=col(r'^yoyquarterlyprofit'),sg=col(r'^yoyquarterlysales'),prom=col(r'^promoterholding'),promc=col(r'^changeinpromoter'),pledge=col(r'^pledged'),fii=col(r'^fiiholding'),fiic=col(r'^changeinfii'),dii=col(r'^diiholding'),diic=col(r'^changeindii'))
+        def num(r_,k):
+            if not M.get(k): return None
+            v=pd.to_numeric(r_[M[k]],errors='coerce'); return float(v) if pd.notna(v) else None
+        if M['sym']:
+            for _,r_ in q.iterrows():
+                s=str(r_[M['sym']]).strip().upper()
+                if not s or s=='NAN': continue
+                d={k:num(r_,k) for k in('mcap','pe','roe','roce','de','s3','p3','npg','sg','pledge')}
+                for k,ck in(('prom','promc'),('fii','fiic'),('dii','diic')):
+                    v=num(r_,k); c_=num(r_,ck); d[k]=None if v is None else [round(v-(c_ or 0),2),v]
+                SC[s]=d
+            try: scasof=dt.datetime.strptime(subprocess.run(['git','log','-1','--format=%cs','--','fundamentals.csv'],capture_output=True,text=True,cwd=os.path.dirname(fp)).stdout.strip(),'%Y-%m-%d').strftime('%d %b %Y')
+            except Exception: scasof=f"{asof:%d %b %Y}"
+        else: print('fundamentals.csv skipped: no "NSE Code" or "Symbol" column')
+    except Exception as e: print('fundamentals.csv skipped:',e)
+out=dict(sc=SC,scAsof=scasof,asof=f"{asof:%d %b %Y}",built=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'),dates=[f"{d:%Y-%m-%d}" for d in C.index[-120:]],stocks=stocks,bt=bt)
 json.dump(out,open(f"{WD}/data.json",'w'),separators=(',',':'),ensure_ascii=False)
 buys=sorted([x for x in stocks if x['mrank'] and x['mrank']<=30],key=lambda x:x['mrank'])
-print(json.dumps(dict(files=got,days=n,asof=out['asof'],stocks=len(stocks),buy=sum(x['signal']=='BUY' for x in stocks),rising=rising,breadth=bt['bnow'],top5=[x['sym'] for x in buys[:5]])))
+print(json.dumps(dict(fundamentals=len(SC),files=got,days=n,asof=out['asof'],stocks=len(stocks),buy=sum(x['signal']=='BUY' for x in stocks),rising=rising,breadth=bt['bnow'],top5=[x['sym'] for x in buys[:5]])))
