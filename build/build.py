@@ -20,12 +20,12 @@ with ThreadPoolExecutor(12) as ex: got=sum(ex.map(get,days))
 for nm,u in[('n50','content/indices/ind_nifty50list.csv'),('n500','content/indices/ind_nifty500list.csv'),('tm','content/indices/ind_niftytotalmarket_list.csv'),('eql','content/equities/EQUITY_L.csv'),('etf','content/equities/eq_etfseclist.csv')]: curl(A+u,f"{WD}/{nm}.csv")
 fr=[]
 for f in sorted(os.listdir(BH)):
-    try: d=pd.read_csv(f"{BH}/{f}",skipinitialspace=True,usecols=['SYMBOL','SERIES','DATE1','OPEN_PRICE','HIGH_PRICE','LOW_PRICE','CLOSE_PRICE','TTL_TRD_QNTY','TURNOVER_LACS'])
+    try: d=pd.read_csv(f"{BH}/{f}",skipinitialspace=True,usecols=['SYMBOL','SERIES','DATE1','OPEN_PRICE','HIGH_PRICE','LOW_PRICE','CLOSE_PRICE','TTL_TRD_QNTY','TURNOVER_LACS','DELIV_PER'])
     except Exception: continue
     fr.append(d[d.SERIES=='EQ'])
 a=pd.concat(fr).drop_duplicates(['SYMBOL','DATE1']); a['DATE1']=pd.to_datetime(a.DATE1,format='%d-%b-%Y')
 cols=['OPEN_PRICE','HIGH_PRICE','LOW_PRICE','CLOSE_PRICE','TTL_TRD_QNTY','TURNOVER_LACS']
-for c in cols: a[c]=pd.to_numeric(a[c],errors='coerce').astype(float)
+for c in cols+['DELIV_PER']: a[c]=pd.to_numeric(a[c],errors='coerce').astype(float)
 try: etf=set(pd.read_csv(f"{WD}/etf.csv",skipinitialspace=True).iloc[:,0].astype(str).str.strip())
 except Exception: etf=set()
 rx=re.compile(r'ETF|BEES|NIFTY|GOLD|SILVER|LIQUID|SENSEX|GILT|NV20|N100|NASDAQ|GSEC|CPSE|BBETF|SDL|HNGSNG|MAFANG|MON100|SML100|MID150|SMALL250|LOWVOL|MOMENTUM|ALPHA$|CASE$|ADD$|1D$|\dIETF')
@@ -42,6 +42,15 @@ for c in cols[:4]: a[c]/=a.f
 a['TTL_TRD_QNTY']*=a.f
 W=lambda c:a.pivot(index='DATE1',columns='SYMBOL',values=c)
 O,H,L,C,V,TO=[W(c) for c in cols]; n=len(C); asof=C.index[-1]
+dv20=W('DELIV_PER').rolling(20,min_periods=10).mean().iloc[-1]
+DEALS={}
+for kind in('bulk','block'):
+    try:
+        curl(A+f'content/equities/{kind}.csv',f"{WD}/{kind}.csv"); q=pd.read_csv(f"{WD}/{kind}.csv",skipinitialspace=True); q.columns=[c.strip() for c in q.columns]
+        q['d']=pd.to_datetime(q['Date'],format='%d-%b-%Y',errors='coerce'); q=q[q.d==asof]
+        for _,r_ in q.iterrows():
+            DEALS.setdefault(str(r_['Symbol']).strip(),[]).append(dict(kind=kind,who=str(r_['Client Name']).strip()[:60],side=str(r_['Buy/Sell']).strip().upper(),qty=float(str(r_['Quantity Traded']).replace(',','')),px=float(str(r_['Trade Price / Wght. Avg. Price']).replace(',',''))))
+    except Exception as e: print('deals',kind,'skipped',e)
 U=(TO.rolling(20,min_periods=15).median()>=200)&(C>=10)
 s50=C.rolling(50).mean(); s200=C.rolling(200).mean(); e20=C.ewm(span=20,adjust=False,ignore_na=True).mean()
 dl=C.diff(); up_=dl.clip(lower=0).ewm(alpha=1/14,adjust=False,ignore_na=True).mean(); dn_=(-dl.clip(upper=0)).ewm(alpha=1/14,adjust=False,ignore_na=True).mean(); rsi=100-100/(1+up_/dn_)
@@ -79,7 +88,7 @@ for s in C.columns:
       hi52=r2(last['hi52'][s]),lo52=r2(last['lo52'][s]),offHigh=r2(last['off'][s]),r1m=rt(s,21),r3m=rt(s,63),r6m=rt(s,126),r12m=rt(s,250),volr=r2(last['volr'][s]),
       s200up=bool(last['s200'][s]>s200p[s]),to=r2(med20[s]),adj=ADJ.get(s,[]),px=[f4(v) for v in C[s].iloc[-120:]],p50=[f4(v) for v in s50[s].iloc[-120:].iloc[::-5].iloc[::-1]],p200=[f4(v) for v in s200[s].iloc[-120:].iloc[::-5].iloc[::-1]],
       mom=r2(last['mom'][s]*100) if np.isfinite(last['mom'][s]) else 0,tscore=r2(last['ts'][s]),signal=sig,why=why,entry=r2(c),stop=r2(c-2*a_),target=None,riskPct=r2(2*a_/c*100),
-      mrank=r,liq300=s in liqs,m121=r2(m121[s]*100) if s in m121 else None,vol=r2(vol[s]*100) if s in vol else None)
+      mrank=r,liq300=s in liqs,deliv=r2(dv20[s]) if s in dv20 else None,deals=DEALS.get(s,[]),m121=r2(m121[s]*100) if s in m121 else None,vol=r2(vol[s]*100) if s in vol else None)
     stocks.append(x)
 b=breadth.iloc[-120:]
 bt=dict(breadth=[r2(v) for v in b],bavg=[r2(v) for v in bavg.iloc[-120:]],rising=rising,bnow=round(float(breadth.iloc[-1]),1),nrank=len(sc))

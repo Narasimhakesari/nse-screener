@@ -135,6 +135,7 @@ a{color:var(--accent)}
     <div class="field"><label for="sector">Sector</label><select id="sector"><option value="">All sectors</option></select></div>
     <div class="field"><label for="idx">Index</label><select id="idx"><option value="">All stocks</option><option value="Nifty 50">Nifty 50</option><option value="Nifty 500">Nifty 500</option><option value="Other">Outside Nifty 500</option></select></div>
     <div class="field"><label for="q">Search</label><input type="search" id="q" placeholder="Name or symbol"></div>
+    <label class="chk" for="clean"><input type="checkbox" id="clean"> Momentum 30 with no cautions</label>
     <label class="chk" for="fq"><input type="checkbox" id="fq"> Fundamental score 50 or more</label>
     <div class="sum" id="sum"></div>
   </section>
@@ -172,7 +173,7 @@ a{color:var(--accent)}
       <p>How to read this. Stocks that later delisted are included up to the day they stopped trading, so survivorship bias is reduced, not removed. Five years is still short and included a strong bull run in 2023; momentum can fall hard and fast when leadership changes. The worst fall of the ungated model was about 30%. Costs are 0.2% per round trip unless stated. The swing rules were tuned on 2025–26 data; the Momentum 30 settings were fixed in advance and every variant I ran is shown. Past results do not predict future ones.</p></div>
     <div><h2>Data and limits</h2>
       <ul><li>Universe: NSE main-board shares with at least 220 trading days of history, a price of ₹10 or more and median daily turnover of ₹2 crore or more. ETFs, SME listings and thinly traded shares are left out.</li><li>Prices: NSE end-of-day files, <span id="nb"></span> trading days. Backtests use files from Dec 2020. One-day drops of more than 25% are treated as splits, bonuses or demergers and earlier prices are scaled; each case is noted on the stock. Dividends are not adjusted.</li>
-      <li>Fundamentals: MoneyWorks4Me Nifty 50 list for those 50 stocks; others need the CSV import. Debt, cash flow, promoter holding and quarterly results are not included.</li><li>News: checked by web search on 14 Nov 2026 for nine stocks only, chosen under earlier rules; most of the Momentum 30 are unchecked. Every other stock has a link to search its news. News does not change the score; read it before acting.</li>
+      <li>Fundamentals: MoneyWorks4Me Nifty 50 list for those 50 stocks; others need the CSV import. Debt, cash flow, promoter holding and quarterly results are not included.</li><li>Cautions are warning flags for you to read: very high volatility, RSI above 75, delivery below 25%, estimated price adjustments, net selling in bulk or block deals on the last trading day, mixed news, and turnover under ₹10 crore. They do not change the Buy list. In the backtest, filtering the Momentum 30 by delivery percentage or by technical confirmation lowered returns, so no filter is applied.</li><li>News: checked by web search on 14 Nov 2026 for nine stocks only, chosen under earlier rules; most of the Momentum 30 are unchecked. Every other stock has a link to search its news. News does not change the score; read it before acting.</li>
       <li>Smaller stocks move fast and can gap past a stop-loss. Size positions so one loss costs about 1% of capital.</li></ul></div>
   </section>
 </div>
@@ -188,7 +189,10 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const NEWS=ST.news||{}, DT=D.dates;
 let st={w:0.5,sig:'ALL',sector:'',idx:'',q:'',fq:false,sort:'mrank',dir:1,sel:null,lim:100};
 try{const m=JSON.parse(localStorage.getItem('n50scr')||'{}'); if([0.7,0.5,0.3].includes(m.w)) st.w=m.w;}catch(e){}
-S.forEach(s=>{s.vs200=(s.close/s.s200-1)*100;s.news=NEWS[s.sym]||null;});
+const cautions=s=>{const c=[];if(s.vol!=null&&s.vol>60)c.push('Very volatile: '+s.vol.toFixed(0)+'% a year');if(s.rsi>75)c.push('Overbought: RSI '+s.rsi.toFixed(0));if(s.deliv!=null&&s.deliv<25)c.push('Low delivery: '+s.deliv.toFixed(0)+'% (mostly intraday trading)');
+  if((s.adj||[]).some(a=>a.includes('non-standard')))c.push('Price history adjusted by estimate');const d=s.deals||[],sell=d.filter(x=>x.side==='SELL').reduce((a,x)=>a+x.qty,0),buy=d.filter(x=>x.side==='BUY').reduce((a,x)=>a+x.qty,0);if(sell>buy)c.push('Net selling in bulk or block deals on the last day');
+  if(s.news&&s.news.tone==='Mixed')c.push('Mixed news');if(s.to<10)c.push('Thin trading: under ₹10 crore a day');return c;};
+S.forEach(s=>{s.vs200=(s.close/s.s200-1)*100;s.news=NEWS[s.sym]||null;s.caut=cautions(s);s.ncaut=s.caut.length;});
 const FW={roe:[30,1],profit5:[20,1],sales5:[15,1],pe:[15,0],evebitda:[12,0],pb:[8,0]};
 function calcF(){
   const vals={};for(const k in FW)vals[k]=S.filter(s=>s[k]!=null&&!(k==='evebitda'&&s.sector==='Financial Services')).map(s=>s[k]).sort((a,b)=>a-b);
@@ -208,12 +212,12 @@ const COLS=[
  ['score','Score','grp',null],['tscore','Technical','',s=>Math.round(s.tscore)],['fscore','Fundamental','',s=>s.fscore==null?'<span class="dim">n/a</span>':Math.round(s.fscore)],
  ['close','Price ₹','grp',s=>fmt(s.close)],['chg','Day','',s=>`<span class="${s.chg>=0?'pos':'neg'}">${pct(s.chg)}</span>`],
  ['rsi','RSI','',s=>s.rsi.toFixed(0)],['vs200','vs 200-day','',s=>`<span class="${s.vs200>=0?'pos':'neg'}">${pct(s.vs200)}</span>`],['offHigh','From 52w high','',s=>pct(s.offHigh)],
- ['m121','12-1m return','grp',s=>s.m121==null?'–':pct(s.m121,0)],['r6m','6 months','',s=>`<span class="${s.r6m>=0?'pos':'neg'}">${pct(s.r6m,0)}</span>`],['to','Turnover ₹cr','',s=>fmt(s.to,0)],
+ ['m121','12-1m return','grp',s=>s.m121==null?'–':pct(s.m121,0)],['r6m','6 months','',s=>`<span class="${s.r6m>=0?'pos':'neg'}">${pct(s.r6m,0)}</span>`],['to','Turnover ₹cr','',s=>fmt(s.to,0)],['deliv','Delivery %','',s=>s.deliv==null?'–':s.deliv.toFixed(0)],['ncaut','Cautions','',s=>s.ncaut?`<span class="pill Mixed">${s.ncaut}</span>`:'<span class="pos">none</span>'],
  ['entry','Entry ₹','grp',s=>fmt(s.entry)],['stop','Optional stop ₹','',s=>fmt(s.stop)]];
 const ORD={BUY:0,WAIT:1,AVOID:2};
 function rows(){
   const q=st.q.trim().toLowerCase();
-  let r=S.filter(s=>(st.sig==='ALL'||s.signal===st.sig)&&(!st.sector||s.sector===st.sector)&&(!st.idx||s.idx===st.idx||(st.idx==='Nifty 500'&&s.idx==='Nifty 50'))&&(!q||s.sym.toLowerCase().includes(q)||s.name.toLowerCase().includes(q))&&(!st.fq||(s.fscore!=null&&s.fscore>=50)));
+  let r=S.filter(s=>(st.sig==='ALL'||s.signal===st.sig)&&(!st.sector||s.sector===st.sector)&&(!st.idx||s.idx===st.idx||(st.idx==='Nifty 500'&&s.idx==='Nifty 50'))&&(!q||s.sym.toLowerCase().includes(q)||s.name.toLowerCase().includes(q))&&(!st.fq||(s.fscore!=null&&s.fscore>=50))&&(!st.clean||(s.mrank&&s.mrank<=30&&!s.ncaut)));
   const key=s=>st.sort==='score'||st.sort==='rank'?score(s):st.sort==='signal'?-ORD[s.signal]:st.sort==='news'?(s.news?1:0):s[st.sort];
   r.sort((a,b)=>{const x=key(a),y=key(b); if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return typeof x==='string'?st.dir*x.localeCompare(y):st.dir*(x-y)||score(b)-score(a);});
   return r;
@@ -245,6 +249,7 @@ function detail(){
    <div class="head"><h2>${esc(s.name)} <span class="dim num">${esc(s.sym)}</span></h2><span class="px">₹${fmt(s.close)}</span><span class="num ${s.chg>=0?'pos':'neg'}">${pct(s.chg)}</span>
      <span class="pill ${s.signal}">${s.signal==='BUY'?'▲ BUY':s.signal==='WAIT'?'● WAIT':'▼ AVOID'}</span><span class="why">${esc(s.why)}.</span><button type="button" class="btn" id="holdBtn">${HOLD.has(s.sym)?'✓ In my holdings (click to remove)':'+ Add to my holdings'}</button><a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">Open live chart</a></div>
    <div class="newsbox">${s.news?`<h3>News</h3><span class="pill ${s.news.tone==='Nothing found'?'none':s.news.tone}">${s.news.tone}</span><p>${esc(s.news.text)} <span class="dim">${esc(s.news.date)}${s.news.url?` · <a href="${esc(s.news.url)}" target="_blank" rel="noopener">${esc(s.news.src)}</a>`:''}</span></p>`:`<h3>News</h3><p>Not checked for this stock. <a href="https://www.google.com/search?tbm=nws&q=${encodeURIComponent(s.name+' share news')}" target="_blank" rel="noopener">Search recent news for ${esc(s.name)}</a> before acting.</p>`}</div>
+   <div class="newsbox"><h3>Cautions</h3><p>${s.caut.length?s.caut.map(esc).join(' · '):'None of the listed caution checks apply.'}${(s.deals||[]).length?'<br>'+s.deals.map(d=>esc(`${d.kind==="bulk"?"Bulk":"Block"} deal: ${d.who} ${d.side==="BUY"?"bought":"sold"} ${d.qty.toLocaleString("en-IN")} at ₹${d.px}`)).join('<br>'):''}</p></div>
    <div><div class="chartbox"><div class="legend"><span><i style="background:var(--s1)"></i>Close</span><span><i style="background:var(--s2)"></i>50-day average</span><span><i style="background:var(--s3)"></i>200-day average</span><span class="dim">Dashed lines: entry, optional stop</span></div><div id="chart"></div><div class="tip" id="tip"></div></div></div>
    <div class="side">
      <div><h3>Trade plan</h3><div class="ticket" style="margin-top:8px">
@@ -281,7 +286,7 @@ function detail(){
        <li><span>1 month</span><span class="num">${pct(s.r1m)}</span></li><li><span>3 months</span><span class="num">${pct(s.r3m)}</span></li>
        <li><span>6 months</span><span class="num">${pct(s.r6m)}</span></li><li><span>12 months ago to 1 month ago</span><span class="num">${pct(s.m121)}</span></li><li><span>Volatility, yearly</span><span class="num">${s.vol==null?'–':s.vol.toFixed(0)+'%'}</span></li><li><span>12 months</span><span class="num">${pct(s.r12m)}</span></li>
        <li><span>52-week range</span><span class="num">₹${fmt(s.lo52)} – ₹${fmt(s.hi52)}</span></li>
-       <li><span>ATR(14), average daily range</span><span class="num">₹${fmt(s.atr)}</span></li><li><span>Median daily turnover</span><span class="num">₹${fmt(s.to,1)} cr</span></li>
+       <li><span>ATR(14), average daily range</span><span class="num">₹${fmt(s.atr)}</span></li><li><span>Delivery, 20-day average</span><span class="num">${s.deliv==null?'–':s.deliv.toFixed(1)+'%'}</span></li><li><span>Median daily turnover</span><span class="num">₹${fmt(s.to,1)} cr</span></li>
        ${s.adj.length?`<li><span>Price adjusted for split or bonus</span><span class="num">${esc(s.adj.join(', '))}</span></li>`:''}
      </ul></div>
    </div>`;
@@ -358,6 +363,7 @@ $('#csv').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)re
     calcF();render();detail();msg.textContent=n?`Fundamentals loaded for ${n} stocks from ${f.name}.`:'No rows matched a stock in the screener. Check the symbol column.';
   }catch(err){msg.textContent='Could not read that file. Save it as a plain CSV and try again.';}});
 $('#q').addEventListener('input',e=>{st.q=e.target.value;render();});
+$('#clean').addEventListener('change',e=>{st.clean=e.target.checked;render();});
 $('#fq').addEventListener('change',e=>{st.fq=e.target.checked;render();});
 $('#tbl thead').addEventListener('click',e=>{const th=e.target.closest('#tbl th');if(!th)return;const k=th.dataset.k;if(st.sort===k)st.dir*=-1;else{st.sort=k;st.dir=(k==='sym'||k==='pe'||k==='mrank')?1:-1;}render();});
 $('#tbl tbody').addEventListener('click',e=>{const tr=e.target.closest('tr');if(tr){pick(tr.dataset.sym);$('#detail').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}});
