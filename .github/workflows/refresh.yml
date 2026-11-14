@@ -1,0 +1,36 @@
+name: Refresh screener data
+on:
+  schedule:
+    - cron: '7 15 * * 1-5'   # 8:37 pm IST, Monday to Friday
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy
+      - name: Rebuild data
+        run: |
+          mkdir -p wd
+          python build/build.py wd | tee summary.txt
+      - name: Check the result before publishing
+        run: |
+          python - <<'PY'
+          import json
+          s=json.loads(open('summary.txt').read().strip().splitlines()[-1])
+          assert s['files']>=300 and 700<=s['stocks']<=1600 and 1<s['breadth']<99 and len(s['top5'])==5, s
+          PY
+          cp wd/data.json data.json
+      - name: Commit new data
+        run: |
+          git config user.name "screener-bot"
+          git config user.email "screener-bot@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet || git commit -m "Refresh data"
+          git push
