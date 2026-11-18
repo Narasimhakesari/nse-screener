@@ -35,7 +35,8 @@ Visitors choose a style (Balanced, Momentum, Swing trade, Long-term) or set thei
 
 The file needs an `NSE Code` column. Recognised columns: Market Capitalization, Price to Earning, Return on equity, Return on capital employed, Debt to equity, Sales growth 3Years, Profit growth 3Years, YOY Quarterly profit growth, YOY Quarterly sales growth, Promoter holding, Change in promoter holding, Pledged percentage, FII holding, Change in FII holding, DII holding, Change in DII holding.
 
-## Updating news
+## Updating news (automatic)
+A weekly scheduled task runs `python3 build/agent_tasks.py todo`, researches news and the latest quarterly results for the listed stocks, merges them with `python3 build/agent_tasks.py apply notes.json` and commits `static.json`. To do it by hand:
 News notes live in `static.json` under `news`, one entry per symbol: `tone` (Positive, Mixed, Negative or Nothing found), `date`, `text`, `src` and `url`. Refresh them for the current top picks every week or two.
 
 Not investment advice.
