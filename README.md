@@ -1,15 +1,29 @@
-# NSE Stock Agent: momentum trades
+# NSE Stock Agent: hold the 5 strongest NSE stocks
 
 A static website that runs one tested rule on NSE stocks and updates itself every weekday night.
 
-**The rule.** Every evening, rank the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by their 12-month return skipping the last month, divided by volatility. When a stock enters the top 30 and was not in it during the previous 20 trading days, buy it at the next day's open, with a stop-loss 10% below the buy price. Sell at the open 21 trading days later.
+**The rule.** On the last trading day of each month, after the close, rank the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by their 12-month return skipping the last month, divided by volatility. Hold the top 5 in equal amounts. At the next open, sell any holding that left the top 5 and buy the new ones. No stop-loss.
 
-**The test** (`build/backtest_daily_momentum.py`, re-run nightly into `daily_bt.json`): from Sep 2022 to Nov 2026, after 0.3% costs, about +1.7% a trade, 48% won, about 14 trades a month, worst trade about −21% (gaps through the stop are filled at the open). Random stocks from the same 300 with the same exits made about +0.7%. Without the 20-day freshness rule: +1.1% and 45 trades a month. Selling when a stock leaves the top 30: about +0.2%. The 500 most-traded instead of 300: about the same per trade. Stocks entering straight into the top 10 made about +4% a trade but were too few (33) to rely on. The rule made about +2.5% a trade when market breadth was rising and +0.9% when falling, so the page shows market mood as a position-size warning. A once-a-month version (`build/backtest_momentum.py`) made about +2.1% a trade.
+**Why this rule** (`build/backtest_algos.py`, re-run nightly into `algos_bt.json`): 11 strategy types were run as real portfolios with the same rules (at most 10 positions unless stated, next-open trades, gaps through stops filled at the open, 0.3% costs, textbook settings). From Sep 2022 to Nov 2026, before tax:
 
-**Tested and dropped:** blends with trend, seasonality and chart setups (`build/backtest_styles.py`); a 200-day-average filter; target/stop swing exits and short holds (`build/backtest_trades.py`); trailing stops; a valuation penalty. Company results and news cannot be backtested here; they appear on each stock's page as information.
+| Strategy | Yearly return | Worst fall |
+|---|---|---|
+| Momentum, monthly top 5 (this rule) | 38.9% | −33% |
+| Momentum, monthly top 10 | 31.1% | −39% |
+| Momentum, monthly top 20 | 28.3% | −30% |
+| Momentum, daily fresh top-30 entries, 21 days, 10% stop | 21.4% | −36% |
+| Momentum, monthly top 10 with a 10% stop | 20.5% | −35% |
+| Benchmark: 300 most-traded, equal weight | 18.1% | −24% |
+| Trend crossover, low volatility, 52-week breakout, RSI(2) mean reversion, 5-day reversal, delivery surge, volume-spike drift, 50-day breakout with target/stop, buying dips in leaders | −1% to 30%, none beat the market in both halves | |
+
+Only momentum strategies beat the market in both halves of the period (before and after 1 Jan 2025). Stop-losses lowered momentum returns. Holding cash at month-ends when market breadth is falling cut the top-5 rule's worst fall to about −19% but its return to about 24% a year; the page shows this as a choice. Short-term capital gains on listed shares are taxed at 20%, which these figures do not include. The test covers about four years, including the strong 2023; past results do not predict future ones.
+
+Earlier tests kept in the repo: `build/backtest_styles.py` (blended scores), `build/backtest_trades.py` (swing setups with target/stop), `build/backtest_momentum.py` and `build/backtest_daily_momentum.py` (momentum trades with stops).
+
+Not investment advice.
 
 ## Alerts (optional)
-`build/notify.py` records every trade from launch in `history.json` (the page's live track record) and sends one evening message only when there is something to do: new buys for tomorrow's open, trades to sell at tomorrow's open, stop-losses hit, a change in market mood, and a Friday list of open trades. Add repository secrets (Settings → Secrets and variables → Actions):
+`build/notify.py` keeps the live record of each review in `history.json` (the page's live track record) and sends a message on review evenings (what to sell and buy at the next open), when the market mood changes, and every Friday (the five holdings, flagging any that would be swapped if the review were that day). Add repository secrets (Settings → Secrets and variables → Actions):
 - Telegram: `TELEGRAM_BOT_TOKEN` (create a bot with @BotFather) and `TELEGRAM_CHAT_ID` (send your bot a message, then open `https://api.telegram.org/bot<token>/getUpdates` and copy `chat.id`).
 - Or the free ntfy app: `NTFY_TOPIC`, any long private name you also subscribe to in the app.
 

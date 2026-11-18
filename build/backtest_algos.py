@@ -41,7 +41,10 @@ def strat_defs():
     S = {}
     # name: (entry signal, priority (higher first), exit spec)
     S['Momentum: fresh top-30 entry, 21 days, 10% stop'] = (fresh, -MR, dict(stop=.10, days=21))
+    S['Momentum: monthly top 5, rebalance each month-end (the site\'s rule)'] = ('monthly', -MR, dict(rebalance=5, maxpos=5))
     S['Momentum: monthly top 10, rebalance each month-end'] = ('monthly', -MR, dict(rebalance=10))
+    S['Momentum: monthly top 20, rebalance each month-end'] = ('monthly', -MR, dict(rebalance=20, maxpos=20))
+    S['Momentum: monthly top 10 with a 10% stop-loss'] = ('monthly', -MR, dict(rebalance=10, stop=.10))
     S['Momentum: dip in a leader (top-30, RSI14 < 40), 15 days'] = (in30 & (rsi14 < 40), -MR, dict(stop=.10, days=15))
     S['Breakout: new 52-week high on 1.5x volume, exit below 20-day low'] = (LIQ & (C >= hi250) & (V > 1.5 * vol50), mq, dict(stop=.10, trail_low20=True, days=60))
     S['Breakout: 50-day high on 1.5x volume, 20% target / 10% stop, 40 days'] = (LIQ & BRK, V / vol50, dict(stop=.10, target=.20, days=40))
@@ -55,6 +58,7 @@ def strat_defs():
 
 def simulate(entry, prio, ex, mood=False, lo=START, hi=None):
     hi = hi or n - 1
+    mp = ex.get('maxpos', MAXPOS)
     Pv = prio.reindex(index=dates, columns=C.columns).values
     Ev = None if isinstance(entry, str) else entry.reindex(index=dates, columns=C.columns).fillna(False).values
     cash, pos, eq, trades = 1.0, {}, [], []
@@ -74,11 +78,11 @@ def simulate(entry, prio, ex, mood=False, lo=START, hi=None):
         # 2) buys at today's open from yesterday's signals
         if i > lo and pend:
             for j in pend:
-                if len(pos) >= MAXPOS: break
+                if len(pos) >= mp: break
                 o = Ov[i, j]
                 if j in pos or not np.isfinite(o) or o <= 0: continue
-                val = min(cash, eqv / MAXPOS)
-                if val < eqv / MAXPOS * 0.5: break
+                val = min(cash, eqv / mp)
+                if val < eqv / mp * 0.5: break
                 sh = val / (o * (1 + COST)); cash -= val
                 pos[j] = dict(e=o, sh=sh, bi=i, stop=o * (1 - ex.get('stop', 1)), tgt=o * (1 + ex.get('target', 9)))
         # 3) mark to market at the close
@@ -134,5 +138,11 @@ if __name__ == '__main__':
         f, mo = out[name]['full'], out[name]['mood']
         print(f"{name:72s} CAGR {f['cagr']:6.1f}% DD {f['dd']:6.1f}% Sharpe {f['sharpe']:5.2f} trades {f['trades']:4d} win {f['win']}% avg {f['avg']}% | "
               f"halves {sa['cagr']:+.1f}% / {sb['cagr']:+.1f}% | mood filter CAGR {mo['cagr']:.1f}% DD {mo['dd']:.1f}% | {f['years']}")
+    # detail for the site's rule: weekly growth of Rs 100 against the benchmark
+    k = [x for x in S if "site's rule" in x][0]; en, pr, ex = S[k]
+    e, _ = simulate(en, pr, ex)
+    wk = e.resample('W-FRI').last().dropna(); bw = be.reindex(wk.index, method='ffill')
+    out['curve'] = dict(dates=[f"{x:%Y-%m-%d}" for x in wk.index], rule=[round(v * 100, 2) for v in wk.values], bench=[round(v * 100, 2) for v in bw.values])
+    out['pick'] = k
     json.dump(dict(built=pd.Timestamp.now('UTC').strftime('%Y-%m-%dT%H:%MZ'), start=str(dates[START].date()), end=str(dates[-1].date()),
-                   split='2025-01-01', results=out), open(f'{WD}/algos_bt.json', 'w'), indent=1)
+                   split='2025-01-01', results={k_: v for k_, v in out.items() if k_ not in ('curve', 'pick')}, curve=out['curve'], pick=out['pick']), open(f'{WD}/algos_bt.json', 'w'), indent=1)

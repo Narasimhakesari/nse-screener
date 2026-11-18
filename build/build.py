@@ -145,33 +145,49 @@ tomF=TO.rolling(60,min_periods=40).median(); liqF=tomF.where(C>=10).rank(axis=1,
 mqF=((C.shift(21)/C.shift(252)-1)/(ret.rolling(126,min_periods=100).std()*252**.5)).where(liqF&C.shift(252).notna())
 mrF=mqF.rank(axis=1,ascending=False)
 TRULES=[('breakout',liqF&BRK),('momtrend',(mrF<=30)&(C>s50)&(C.shift(1)<=s50.shift(1))),('new30',(mrF<=30)&~(mrF.shift(1)<=30))]
-# Daily momentum trade (tested in build/backtest_daily_momentum.py): after each close, a stock that enters the top 30
-# (of the 300 most-traded, by 12-month return skipping the last month / volatility) and was not in the top 30 at any point
-# in the previous 20 trading days is bought at the next open, with a 10% stop, and sold at the open 21 trading days later.
-dts=C.index; nD=len(dts)
-in30=(mrF<=30); rec30=in30.rolling(20,min_periods=1).max().shift(1).fillna(0).astype(bool)
-SIGD=in30&~rec30
-Ox,Lx=O.values,L.values; HOLD=21
-def _bday(k):  # date of trading day index k, estimating weekdays past the data
-    return dts[k] if k<nD else dts[-1]+pd.offsets.BDay(k-(nD-1))
-MT=[]
-for i_ in range(max(260,nD-70),nD):
-    for s_ in SIGD.columns[SIGD.iloc[i_].values]:
-        j_=C.columns.get_loc(s_); t=dict(sym=s_,signal=f"{dts[i_]:%Y-%m-%d}",rank=int(mrF.iat[i_,mrF.columns.get_loc(s_)]),
-            closeAtSignal=r2(C.iat[i_,j_]),sellBy=f"{_bday(i_+1+HOLD):%Y-%m-%d}")
-        bi=i_+1
-        if bi>=nD: t['status']='new'; MT.append(t); continue
-        buy=Ox[bi,j_]
-        if not np.isfinite(buy): continue
-        stop=buy*0.9; t.update(buyDate=f"{dts[bi]:%Y-%m-%d}",buy=r2(buy),stop=r2(stop),status='open')
-        end=bi+HOLD
-        for k in range(bi,min(end,nD)):
-            if k>bi and np.isfinite(Ox[k,j_]) and Ox[k,j_]<=stop: t.update(status='stopped',exitDate=f"{dts[k]:%Y-%m-%d}",exit=r2(Ox[k,j_])); break
-            if np.isfinite(Lx[k,j_]) and Lx[k,j_]<=stop: t.update(status='stopped',exitDate=f"{dts[k]:%Y-%m-%d}",exit=r2(stop)); break
-        if t['status']=='open' and end<nD and np.isfinite(Ox[end,j_]): t.update(status='closed',exitDate=f"{dts[end]:%Y-%m-%d}",exit=r2(Ox[end,j_]))
-        if t['status']=='open' and end==nD: t['sellTomorrow']=True
-        MT.append(t)
-MOM=dict(mode='daily',hold=HOLD,trades=MT,top30Now=[z for z in mrF.iloc[-1].dropna().sort_values().index[:30]])
+# Monthly top-5 momentum (the site's rule; tested in build/backtest_algos.py): on the last trading day of each month,
+# rank the 300 most-traded stocks by 12-month return skipping the last month, divided by volatility; hold the top 5 in
+# equal amounts; at the next open sell what dropped out and buy what came in. No stop-loss (stops lowered returns in tests).
+dts=C.index; nD=len(dts); TOPN=5
+_nb=pd.Timestamp(dts[-1])+pd.offsets.BDay(1)
+MEs=[d for d in pd.Series(dts,index=dts).groupby([dts.year,dts.month]).last()]
+MEs=[d for d in MEs if d!=dts[-1] or _nb.month!=dts[-1].month]
+MEs=[d for d in MEs if dts.get_loc(d)>=260]
+topAt=lambda d:list(mrF.loc[d].dropna().sort_values().index[:TOPN])
+def openAfter(d):
+    k=dts.get_loc(d)+1
+    return (dts[k],O.iloc[k]) if k<nD else (None,None)
+def entryOf(sym,upto):  # earliest review in the unbroken run of reviews (ending at `upto`) where sym was in the top 5
+    k=MEs.index(upto)
+    while k>0 and sym in topAt(MEs[k-1]): k-=1
+    return MEs[k]
+MOM=None
+if len(MEs)>=2:
+    lme,pme=MEs[-1],MEs[-2]; now5,prev5=topAt(lme),topAt(pme)
+    rnow=mrF.iloc[-1]
+    def pos(sym,upto):
+        er=entryOf(sym,upto); bd,orow=openAfter(er); buy=orow[sym] if orow is not None else np.nan
+        return dict(sym=sym,entryReview=f"{er:%Y-%m-%d}",buyDate=(f"{bd:%Y-%m-%d}" if bd is not None else None),
+                    buy=(r2(buy) if np.isfinite(buy) else None),rankNow=(int(rnow[sym]) if np.isfinite(rnow.get(sym,np.nan)) else None))
+    holdings=[dict(pos(z,lme),rankAtReview=now5.index(z)+1,isNew=z not in prev5) for z in now5]
+    sells=[]
+    for z in prev5:
+        if z in now5: continue
+        p_=pos(z,pme); sd,orow=openAfter(lme); px=orow[z] if orow is not None else np.nan
+        p_.update(sellDate=(f"{sd:%Y-%m-%d}" if sd is not None else None),sell=(r2(px) if np.isfinite(px) else None),rankAtReview=(int(mrF.at[lme,z]) if np.isfinite(mrF.at[lme,z]) else None))
+        sells.append(p_)
+    # the rule's last 12 months on past data: equal weight, bought and sold at the open after each review
+    recent=[]
+    for a_,b_ in zip(MEs[-13:-1],MEs[-12:]):
+        ka,kb=dts.get_loc(a_)+1,dts.get_loc(b_)+1
+        if kb>=nD: continue
+        hs=topAt(a_); rs=[O.iat[kb,O.columns.get_loc(h)]/O.iat[ka,O.columns.get_loc(h)]-1 for h in hs]
+        rs=[x for x in rs if np.isfinite(x)]
+        lq=mrF.loc[a_].dropna().index; br=(O.iloc[kb][lq]/O.iloc[ka][lq]-1).replace([np.inf,-np.inf],np.nan).dropna().clip(-.9,3)
+        recent.append(dict(review=f"{a_:%Y-%m-%d}",held=hs,ret=r2(np.mean(rs)*100),bench=r2(br.mean()*100)))
+    MOM=dict(mode='top5',topN=TOPN,review=f"{lme:%Y-%m-%d}",prevReview=f"{pme:%Y-%m-%d}",reviewIsToday=bool(lme==dts[-1]),
+             holdings=holdings,sells=sells,buys=[z for z in now5 if z not in prev5],
+             rankNow=[z for z in rnow.dropna().sort_values().index[:15]],recent=recent)
 TRADE={}
 for k_ in (0,1,2):
     i_=len(C)-1-k_
