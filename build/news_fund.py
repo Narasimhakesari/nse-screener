@@ -20,7 +20,7 @@ NOW = dt.datetime.now(dt.timezone.utc)
 LOG = dict(started=NOW.strftime('%Y-%m-%dT%H:%MZ'), news_ok=0, news_fail=0, fund_ok=0, fund_fail=0, errors=[])
 
 def note(e):
-    if len(LOG['errors']) < 40: LOG['errors'].append(str(e)[:200])
+    if len(LOG['errors']) < 40: LOG['errors'].append(str(e)[:1200])
 
 # ---------- which stocks ----------
 def pick_list(D, n_top=50):
@@ -221,25 +221,40 @@ def facts_for(stock, n, f):
     for x in (n.get('items') or [])[:8]: lines.append(f"Headline ({x.get('src','')}, {x.get('date','')}): {x['t']}")
     return '\n'.join(lines)
 
+def _parse_reply(content):
+    c = (content or '').strip()
+    c = re.sub(r'^```(?:json)?\s*|\s*```$', '', c)
+    m = re.search(r'\{.*\}', c, re.S)
+    return json.loads(m.group(0) if m else c)
+
 def ai_read(text, token):
-    last = None
+    errs = []
     for m in list(MODELS):
-        body = json.dumps(dict(model=m, temperature=0.1, max_tokens=350, response_format={'type': 'json_object'},
-                               messages=[dict(role='system', content=SYSTEM), dict(role='user', content=text)])).encode()
-        req = urllib.request.Request('https://models.github.ai/inference/chat/completions', data=body, method='POST',
-                                     headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json', 'Accept': 'application/json'})
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r: res = json.loads(r.read())
-            out = json.loads(res['choices'][0]['message']['content'])
-            if out.get('tone') not in ('Positive', 'Mixed', 'Negative', 'Neutral') or not out.get('summary'): raise ValueError(f'bad reply {out}')
-            if m != MODELS[0]: MODELS.remove(m); MODELS.insert(0, m)
-            return out, m
-        except urllib.error.HTTPError as e:
-            last = f'{m}: HTTP {e.code} {e.read()[:150]!r}'
-            if e.code == 429: raise RuntimeError(last)
-        except Exception as e:
-            last = f'{m}: {e}'
-    raise RuntimeError(last)
+        for use_fmt in (True, False):
+            payload = dict(model=m, temperature=0.1, max_tokens=400,
+                           messages=[dict(role='system', content=SYSTEM), dict(role='user', content=text)])
+            if use_fmt: payload['response_format'] = {'type': 'json_object'}
+            req = urllib.request.Request('https://models.github.ai/inference/chat/completions', data=json.dumps(payload).encode(), method='POST',
+                                         headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json',
+                                                  'Accept': 'application/json', 'X-GitHub-Api-Version': '2022-11-28'})
+            raw = b''
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r: raw = r.read()
+                res = json.loads(raw)
+                content = res['choices'][0]['message'].get('content')
+                out = _parse_reply(content)
+                if out.get('tone') not in ('Positive', 'Mixed', 'Negative', 'Neutral') or not out.get('summary'):
+                    raise ValueError(f'bad reply: {str(content)[:160]}')
+                if m != MODELS[0]: MODELS.remove(m); MODELS.insert(0, m)
+                return out, m
+            except urllib.error.HTTPError as e:
+                body = e.read()[:200]
+                errs.append(f'{m} fmt={use_fmt}: HTTP {e.code} {body!r}')
+                if e.code == 429: raise RuntimeError(' | '.join(errs))
+                if e.code in (401, 403): raise RuntimeError(' | '.join(errs))
+            except Exception as e:
+                errs.append(f'{m} fmt={use_fmt}: {e} raw={raw[:160]!r}')
+    raise RuntimeError(' | '.join(errs))
 
 def main():
     D = json.load(open(os.path.join(ROOT, 'data.json')))
@@ -334,7 +349,7 @@ def main():
                 LOG['ai_ok'] += 1
             except Exception as e:
                 LOG['ai_fail'] += 1; note(f'ai {sym}: {e}')
-                if 'HTTP 429' in str(e): break
+                if 'HTTP 429' in str(e) or 'HTTP 401' in str(e) or 'HTTP 403' in str(e) or LOG['ai_fail'] >= 3 and LOG['ai_ok'] == 0: break
             time.sleep(4.5)
     else:
         note('no GITHUB_TOKEN: AI reading skipped')
