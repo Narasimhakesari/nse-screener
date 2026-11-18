@@ -140,6 +140,19 @@ EV=dict(asof=f"{asof:%d %b %Y}",start=f"{C.index[0]:%b %Y}",
           evid(PULL,'Pullback','Uptrend, price back within 2% of the 20-day EMA, RSI 40–55')],
   seas=dict(months=int(len(sev)),top=r2(sev.top.mean()) if len(sev) else None,bot=r2(sev.bot.mean()) if len(sev) else None,
             beat=int((sev.top>sev.bot).sum()) if len(sev) else 0,target=int(tmon)))
+# Swing-trade setups (tested in build/backtest_trades.py: 20% target, 10% stop, exit after 40 trading days)
+tomF=TO.rolling(60,min_periods=40).median(); liqF=tomF.where(C>=10).rank(axis=1,ascending=False)<=300
+mqF=((C.shift(21)/C.shift(252)-1)/(ret.rolling(126,min_periods=100).std()*252**.5)).where(liqF&C.shift(252).notna())
+mrF=mqF.rank(axis=1,ascending=False)
+TRULES=[('breakout',liqF&BRK),('momtrend',(mrF<=30)&(C>s50)&(C.shift(1)<=s50.shift(1))),('new30',(mrF<=30)&~(mrF.shift(1)<=30))]
+TRADE={}
+for k_ in (0,1,2):
+    i_=len(C)-1-k_
+    for rule,Msk in TRULES:
+        row=Msk.iloc[i_]
+        for s_ in row[row.fillna(False)].index:
+            if s_ in TRADE: continue
+            TRADE[s_]=dict(rule=rule,date=f"{C.index[i_]:%Y-%m-%d}",daysAgo=k_,sigClose=r2(C.iloc[i_][s_]))
 recent=lambda M,k:M.iloc[-k:].any()
 SET={}
 for s_ in SYMS:
@@ -155,6 +168,7 @@ for x in stocks:
     x['seas']=SEAS.get(s_)
     if x['seas']: x['seas'].pop('tx',None)
     x['e20']=r2(last_e20[s_]) if np.isfinite(last_e20[s_]) else None
+    x['trade']=TRADE.get(s_)
 b=breadth.iloc[-120:]
 bt=dict(breadth=[r2(v) for v in b],bavg=[r2(v) for v in bavg.iloc[-120:]],rising=rising,bnow=round(float(breadth.iloc[-1]),1),nrank=len(sc))
 SC={}; scasof=None

@@ -95,6 +95,17 @@ def main():
             lines += ['', f"Monthly review (Momentum 30 at the {ks[-1]} month-end close):",
                       'Sell: ' + (', '.join(sorted(old30 - new)) or 'none'), 'Buy: ' + (', '.join(sorted(new - old30)) or 'none')]
             if not ends[ks[-1]]['rising']: lines.append('Cautious version: market breadth was falling at month-end, so it holds cash.')
+    RN = {'breakout': 'Breakout', 'momtrend': 'Momentum + trend turn', 'new30': 'New momentum leader'}
+    setups = sorted([x for x in D['stocks'] if x.get('trade') and x['trade']['daysAgo'] == 0],
+                    key=lambda x: (['breakout', 'momtrend', 'new30'].index(x['trade']['rule']), -(x.get('fMom') or 0)))
+    if setups:
+        lines += ['', f"New swing setups today ({len(setups)}): buy near the price, target +20%, stop -10%, sell by 40 trading days."]
+        if not rising: lines.append('Market is cautious: in the test these setups made much less in falling markets. Consider waiting.')
+        for x in setups[:8]:
+            lines.append(f"- {x['sym']} ({RN[x['trade']['rule']]}): Rs {x['close']:,.2f}, target {x['close']*1.2:,.2f}, stop {x['close']*0.9:,.2f}")
+        if len(setups) > 8: lines.append(f"  and {len(setups)-8} more on the site.")
+    H['days'][-1]['setups'] = [[x['sym'], x['close'], x['trade']['rule']] for x in setups]
+    json.dump(H, open(HP, 'w'), separators=(',', ':'))
     news = AUTO.get('news') or {}
     flags = [f"{s['sym']}: {news[s['sym']]['watch']}" for s in top if news.get(s['sym'], {}).get('tone') == 'Negative' and news[s['sym']].get('watch')]
     if flags: lines += ['', 'Negative news in the top 10:'] + flags[:4]

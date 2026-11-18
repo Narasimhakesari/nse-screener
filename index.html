@@ -30,6 +30,7 @@
   --gain:#3fc67a; --loss:#f07a6e; --warn-bg:#3a2f12; --warn-ink:#f5c45a; --bad-bg:#3d1d1c; --good-bg:#15301f;
   --f1:#3987e5; --f2:#d95926; --f3:#199e70; --f4:#c98500; --f5:#d55181; --f6:#9085e9; --pos:#3987e5; --neg:#e66767; --grid:#262c48; --shadow:0 18px 50px rgba(0,0,0,.5);}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--page);color:var(--ink);font:15px/1.5 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 a{color:var(--brand)}
@@ -110,6 +111,10 @@ select,input[type=search],input[type=number]{font:inherit;font-size:14px;padding
 .waitchip{white-space:nowrap;margin-top:4px;font-size:11px!important;color:var(--warn-ink);background:var(--warn-bg);border-radius:999px;padding:1px 7px;display:inline-block!important}
 .caution{background:var(--warn-bg);color:var(--ink);border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
 .caution b{color:var(--warn-ink)}
+.tradeinfo{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 12px;font-size:14px;color:var(--ink2)}
+.tradeinfo ul{margin:6px 0 8px;padding-left:18px}.tradeinfo li{margin:3px 0}.tradeinfo b{color:var(--ink)}
+.tplan{display:grid;grid-template-columns:repeat(4,auto);gap:4px 16px;font-size:14px}.tplan small{display:block;font-size:11.5px;color:var(--muted)}.tplan b{font-weight:600;white-space:nowrap}
+@media (max-width:600px){.tplan{grid-template-columns:repeat(2,auto)}}
 .v-strong{color:var(--gain)} .v-good{color:var(--brand)} .v-watch{color:var(--warn-ink)} .v-avoid{color:var(--loss)}
 .px{text-align:right;font-size:14px}
 .px b{font-weight:600;display:block}
@@ -265,6 +270,7 @@ dialog.drawer[open]{animation:slide .22s ease-out}
   <div class="weights" id="weights"></div>
 
   <div class="caution" id="caution" hidden><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;margin-top:1px"><path d="M12 3l10 18H2z" fill="var(--mari)"/></svg><p><b>The market is cautious, so the tested model is holding cash.</b> In the backtest, waiting at times like this cut the worst fall from about 30% to about 4%, for about 5% a year less return. Use this list to watch. If you buy anyway, use half-size positions and stop-losses.</p></div>
+  <div class="tradeinfo" id="tradeinfo" hidden></div>
   <div class="legend" id="legend" aria-label="Score colours"></div>
   <ol class="picks" id="picks"></ol>
 
@@ -322,7 +328,14 @@ try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'
 catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
 
 const opt=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
-const [AUTO,SBT,HIST]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json')]);
+const [AUTO,SBT,HIST,TBT]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json'),opt('trades_bt.json')]);
+const TR={breakout:{name:'Breakout',long:'Broke to a 50-day high on 1.5 times normal volume',bt:'Breakout: 50-day high on 1.5x volume',order:0},
+  momtrend:{name:'Momentum + trend turn',long:'A top-30 momentum stock closed back above its 50-day average',bt:'Momentum top 30 + trend turn above 50-day',order:1},
+  new30:{name:'New momentum leader',long:'Just entered the top 30 for 12-month momentum',bt:'Momentum top 30 (newly entered)',order:2}};
+const TB=(TBT.results||{})['target 20% / stop 10%']||{};
+const trStat=r=>TB[TR[r].bt]||null;
+const addBiz=(d,n)=>{const x=new Date(d+'T00:00:00');let k=0;while(k<n){x.setDate(x.getDate()+1);const w=x.getDay();if(w&&w<6)k++;}return x;};
+const fmtDay=x=>x.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
 const S=D.stocks, BT=Object.assign({},ST.bt,D.bt), EV=D.ev||{}, MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const TM=(D.tmon||12)-1, TMN=MONL[TM];
 const MI={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
@@ -362,9 +375,9 @@ const F=[{k:'mom',f:'fMom',name:'Momentum',c:'var(--f1)'},{k:'trend',f:'fTrend',
 const STY={
   momentum:{name:'Momentum',bt:'Momentum 30 (the tested model)',desc:'The tested model: strongest stocks, review monthly',gate:false,w:{mom:100,trend:0,fund:0,seas:0,news:0,swing:0}},
   balanced:{name:'Balanced',bt:'Balanced',desc:'Momentum with a little trend, seasonality and quality',gate:true,w:{mom:70,trend:10,fund:5,seas:10,news:5,swing:0}},
-  swing:{name:'Swing trade',bt:'Swing trade',desc:'Momentum stocks with a fresh chart setup',gate:true,w:{mom:85,trend:0,fund:0,seas:0,news:0,swing:15}},
+  swing:{name:'Swing trade',bt:'Swing trade',desc:'Up to 40 days: 20% target, 10% stop',gate:false,trade:true,w:{mom:100,trend:0,fund:0,seas:0,news:0,swing:0}},
   longterm:{name:'Long-term',bt:null,desc:'Momentum plus company results and news',gate:true,w:{mom:60,trend:0,fund:30,seas:0,news:10,swing:0}}};
-const btOf=k=>{const b=SBT.styles&&STY[k].bt&&SBT.styles[STY[k].bt];return b?`Tested: ${b.cagr}% a year, worst fall ${b.dd}%`:'Not testable: needs company history';};
+const btOf=k=>{if(STY[k].trade){const b=trStat('breakout');return b?`Tested: ${pct(b.avg)} a trade, wins ${Math.round(b.win)}%`:'Tested on 5 years of trades';}const b=SBT.styles&&STY[k].bt&&SBT.styles[STY[k].bt];return b?`Tested: ${b.cagr}% a year, worst fall ${b.dd}%`:'Not testable: needs company history';};
 let st={style:store.get('nsaStyle2','momentum'),uni:'liq',sector:'',q:'',sort:'score',dir:-1,lim:10,tlim:50,custom:null};
 if(!STY[st.style])st.style='momentum';
 let WATCH=new Set(store.get('nsaWatch',[]));
@@ -440,13 +453,28 @@ function strip(s){const tw=s.tw||1;return `<div class="strip" role="img" aria-la
 
 // ---------- picks ----------
 function pool(){return S.filter(s=>(st.uni==='all'||(st.uni==='liq'&&s.liq300)||(st.uni==='watch'&&WATCH.has(s.sym)))&&(!st.sector||s.sector===st.sector));}
+function plan(s){const e=s.close;return {entry:e,target:e*1.2,stop:e*0.9,exitBy:addBiz(D.dates[D.dates.length-1],41)};}
+function tradeInfo(){const rows=Object.entries(TR).map(([k,v])=>{const b=trStat(k);return b?`<li><b>${v.name}:</b> ${pct(b.avg)} a trade on average, won ${Math.round(b.win)}% of ${b.n.toLocaleString('en-IN')} trades, held ${Math.round(b.days)} days; ${pct(b.rising_avg)} when the market was healthy, ${pct(b.falling_avg)} when cautious.</li>`:''}).join('');
+  return `<p><b>How these trades are run:</b> buy at the next day's price, sell at +20% or −10%, whichever comes first, or after 40 trading days. Tested on the 300 most-traded stocks from Sept 2022 to Nov 2026, after 0.3% costs:</p><ul>${rows}</ul><p class="muted">About half the trades lose; profit comes from winners being twice the size of losers. Keep each trade small${BT.rising?'':', and today the market is cautious, when the edge was much smaller'}.</p>`;}
+function tradeRow(s,i){const t=s.trade,R_=TR[t.rule],pl=plan(s),mv=(s.close/t.sigClose-1)*100,b=trStat(t.rule);
+  return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${esc(s.name)}, ${R_.name} setup">
+    <div class="rk" aria-hidden="true">${i+1}</div>
+    <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
+      <p class="why">${esc(R_.long)} ${t.daysAgo===0?'today':t.daysAgo===1?'yesterday':'2 days ago'}.${Math.abs(mv)>=1?` Price ${mv>0?'up':'down'} ${Math.abs(mv).toFixed(1)}% since.`:''}${mv>5?' <span class="c">Watch: it has already moved; consider skipping rather than chasing.</span>':''}${s.news&&s.news.tone==='Negative'?` <span class="c">Watch: negative news.</span>`:''}</p></div>
+    <div class="fs tplan"><span><small>Buy near</small><b>₹${inr(pl.entry)}</b></span><span><small>Target +20%</small><b class="up">₹${inr(pl.target)}</b></span><span><small>Stop −10%</small><b class="down">₹${inr(pl.stop)}</b></span><span><small>Exit by</small><b>${fmtDay(pl.exitBy)}</b></span></div>
+    <div class="score"><b style="font-size:24px">${b?pct(b.avg):'–'}</b><span class="muted" style="font-weight:500">tested avg a trade</span>${!BT.rising?'<span class="waitchip">Market says wait</span>':''}</div>
+    <div class="px"><b>${R_.name}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}
 function renderPicks(){
   document.querySelectorAll('.style').forEach(b=>b.setAttribute('aria-pressed',String(!st.custom&&b.dataset.s===st.style)));
   document.querySelectorAll('#uni button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===st.uni)));
-  const P=pool().filter(s=>st.uni==='watch'||!gated()||s.close>s.s200).sort((a,b)=>b.score-a.score);
+  const tradeMode=!st.custom&&STY[st.style].trade;
+  const P=tradeMode?pool().filter(s=>s.trade&&(st.uni!=='liq'||s.liq300||true)).sort((a,b)=>TR[a.trade.rule].order-TR[b.trade.rule].order||a.trade.daysAgo-b.trade.daysAgo||b.score-a.score)
+    :pool().filter(s=>st.uni==='watch'||!gated()||s.close>s.s200).sort((a,b)=>b.score-a.score);
   $('#caution').hidden=!!BT.rising;
-  $('#headline').textContent=st.uni==='watch'?'Your watchlist, ranked':`Today's ${Math.min(st.lim,P.length)||''} best-scoring NSE stocks`.replace('  ',' ');
-  if(!P.length){$('#picks').innerHTML=`<li class="empty">${st.uni==='watch'?'Your watchlist is empty. Open any stock and choose “Add to watchlist”.':'No stock in this sector is above its 200-day average right now. Try All sectors or All stocks.'}</li>`;return;}
+  $('#headline').textContent=st.uni==='watch'?'Your watchlist, ranked':tradeMode?`${P.length} swing-trade setups from the last 3 days`:`Today's ${Math.min(st.lim,P.length)||''} best-scoring NSE stocks`.replace('  ',' ');
+  $('#tradeinfo').hidden=!tradeMode;$('#legend').hidden=tradeMode;if(tradeMode)$('#tradeinfo').innerHTML=tradeInfo();
+  if(!P.length){$('#picks').innerHTML=`<li class="empty">${tradeMode?'No new setups in the last 3 trading days. Check back tomorrow.':st.uni==='watch'?'Your watchlist is empty. Open any stock and choose “Add to watchlist”.':'No stock in this sector is above its 200-day average right now. Try All sectors or All stocks.'}</li>`;return;}
+  if(tradeMode){$('#picks').innerHTML=P.slice(0,st.lim).map((s,i)=>tradeRow(s,i)).join('')+(P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');return;}
   $('#picks').innerHTML=P.slice(0,st.lim).map((s,i)=>{const [vl,vc]=verdict(s),p=pros(s).slice(0,2),c=firstCon(s);
     return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${i+1}. ${esc(s.name)}, score ${Math.round(s.score)}">
       <div class="rk" aria-hidden="true">${i+1}</div>
@@ -486,10 +514,10 @@ function renderAll(){S.forEach(score);renderPicks();renderTable();}
 
 // ---------- drawer ----------
 const dlg=$('#drawer');
-function priceChart(s){
+function priceChart(s,stopP,tgtP){
   const Wd=640,H=250,m={l:6,r:78,t:10,b:22},px=s.px,n=px.length,DT=D.dates;
   const sp=a=>a.map((v,j)=>[n-1-5*(a.length-1-j),v]).filter(p=>p[1]!=null&&p[0]>=0);const m50=sp(s.p50||[]),m200=sp(s.p200||[]);
-  const risk=s.close-s.stop,lv=[['Target',s.close+2*risk],['Entry',s.close],['Stop',s.stop]];
+  const lv=[['Target',tgtP],['Entry',s.close],['Stop',stopP]];
   const all=px.filter(x=>x!=null).concat(m50.map(p=>p[1]),m200.map(p=>p[1]),lv.map(x=>x[1]));let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*.06;lo-=pad;hi+=pad;
   const X=i=>m.l+i*(Wd-m.l-m.r)/(n-1),Y=v=>m.t+(hi-v)*(H-m.t-m.b)/(hi-lo);
   const path=a=>{let d='',pen=false;a.forEach((v,i)=>{if(v==null){pen=false;return;}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pen=true;});return d;};
@@ -499,7 +527,7 @@ function priceChart(s){
   const ls=lv.map(([t,v])=>({t,v,y:Y(v)})).sort((a,b)=>a.y-b.y);for(let i=1;i<ls.length;i++)if(ls[i].y-ls[i-1].y<13)ls[i].y=ls[i-1].y+13;
   const lines=ls.map(o=>`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(o.v)}" y2="${Y(o.v)}" stroke="var(--ink2)" stroke-width="1" stroke-dasharray="${o.t==='Entry'?'6 3':'2 3'}" opacity=".7"/><text x="${Wd-m.r+6}" y="${o.y+4}" style="fill:var(--ink2)">${o.t} ${Math.round(o.v).toLocaleString('en-IN')}</text>`).join('');
   const at=(a,i)=>{for(let j=1;j<a.length;j++)if(a[j][0]>=i){const [x0,y0]=a[j-1],[x1,y1]=a[j];return y0+(y1-y0)*(i-x0)/(x1-x0);}return null;};
-  const html=`<div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:6px"><span><i style="background:var(--f1)"></i>Price</span><span><i style="background:var(--f2)"></i>50-day average</span><span><i style="background:var(--f3)"></i>200-day average</span><span class="muted">Dashed: entry, 2× ATR stop, 2:1 target</span></div>
+  const html=`<div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:6px"><span><i style="background:var(--f1)"></i>Price</span><span><i style="background:var(--f2)"></i>50-day average</span><span><i style="background:var(--f3)"></i>200-day average</span><span class="muted">Dashed: entry, stop and target from the trade plan</span></div>
    <div style="position:relative"><svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${esc(s.name)} closing price for the last ${n} trading days with 50 and 200-day averages">${g}${xt}<path d="${pathS(m200)}" fill="none" stroke="var(--f3)" stroke-width="2"/><path d="${pathS(m50)}" fill="none" stroke="var(--f2)" stroke-width="2"/><path d="${path(px)}" fill="none" stroke="var(--f1)" stroke-width="2" stroke-linejoin="round"/>${lines}
     <circle cx="${X(n-1)}" cy="${Y(px[n-1])}" r="4" fill="var(--f1)" stroke="var(--surface)" stroke-width="2"/><line id="cx" y1="${m.t}" y2="${H-m.b}" stroke="var(--line2)" visibility="hidden"/><circle id="cd" r="4" fill="var(--f1)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/><rect x="${m.l}" y="0" width="${Wd-m.l-m.r}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" id="ptip"></div></div>`;
   return {html,bind(root){const svg=root.querySelector('svg'),tip=root.querySelector('#ptip'),cx=root.querySelector('#cx'),cd=root.querySelector('#cd');
@@ -523,7 +551,7 @@ function seasChart(s){const z=s.seas;if(!z||!z.n.some(x=>x>0))return {html:'<p c
     svg.addEventListener('pointerleave',()=>tip.style.display='none');}};}
 
 function openStock(sym){const s=BY[sym];if(!s)return;score(s);
-  const [vl,vc]=verdict(s),P=pros(s),C=cons(s),risk=s.close-s.stop,tgt=s.close+2*risk,pc=priceChart(s),sc=seasChart(s);
+  const tm=!st.custom&&STY[st.style].trade,[vl,vc]=verdict(s),P=pros(s),C=cons(s),stopP=tm?s.close*0.9:s.stop,risk=s.close-stopP,tgt=tm?s.close*1.2:s.close+2*risk,pc=priceChart(s,stopP,tgt),sc=seasChart(s);
   const nz=s.news,f=s.sc,f5=s.f50;
   const summary=vc==='strong'?'Scores high on what the agent checks.':vc==='good'?'Above average on the important checks, with some gaps.':vc==='watch'?'Mixed signals.':(gated()&&s.close<s.s200)?'Its price is in a downtrend, so this style does not rank it.':'Scores low on what has mattered most.';
   const fund=[];
@@ -551,9 +579,13 @@ function openStock(sym){const s=BY[sym];if(!s)return;score(s);
     ${fund.length?`<div class="card"><h3>Company numbers</h3><div class="kv">${fund.map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('')}</div><p class="muted" style="font-size:12.5px;margin-top:8px">Source: ${fsrc}.</p></div>`:''}
     <div class="card"><h3>Trade plan</h3><div class="kv">
       <span>Buy near</span><b>₹${inr(s.close)}</b>
-      <span>Stop-loss (2× average daily range below)</span><b>₹${inr(s.stop)} <span class="down">${pct(-s.riskPct)}</span></b>
+      ${tm?`<span>Target</span><b>₹${inr(tgt)} <span class="up">+20%</span></b>
+      <span>Stop-loss</span><b>₹${inr(stopP)} <span class="down">−10%</span></b>
+      <span>Sell anyway by</span><b>${fmtDay(addBiz(D.dates[D.dates.length-1],41))} <span class="muted" style="font-weight:500">(40 trading days)</span></b>
+      ${s.trade?`<span>Setup</span><b style="font-weight:500">${TR[s.trade.rule].name}, ${esc(s.trade.date)}</b>`:`<span>Setup</span><b style="font-weight:500">No tested setup in the last 3 days</b>`}`
+      :`<span>Stop-loss (2× average daily range below)</span><b>₹${inr(s.stop)} <span class="down">${pct(-s.riskPct)}</span></b>
       <span>Swing target (twice the risk)</span><b>₹${inr(tgt)} <span class="up">${pct(2*s.riskPct)}</span></b>
-      <span>Momentum style</span><b style="font-weight:500">Hold while in the top 30; review after each month-end</b></div>
+      <span>Momentum style</span><b style="font-weight:500">Hold while in the top 30; review after each month-end</b>`}</div>
       <div class="calc"><label>Your capital ₹<input type="number" id="cap" min="0" step="10000" value="${store.get('nsaCap',500000)}"></label><label>Risk per trade %<input type="number" id="rk" min="0.25" max="5" step="0.25" value="${store.get('nsaRisk',1)}"></label><label>Stocks you hold<input type="number" id="np" min="1" max="50" step="1" value="${store.get('nsaN',10)}"></label><output id="qty" for="cap rk np"></output></div></div>
     ${!BT.rising?'<p class="note">Market breadth is falling. The tested model\'s cautious version holds cash until it turns up, so consider a smaller position or waiting.</p>':''}
     <div class="links"><a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">Live chart on TradingView</a><a href="https://www.screener.in/company/${encodeURIComponent(s.sym)}/" target="_blank" rel="noopener">Financials on Screener.in</a><a href="https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">NSE quote</a></div>
