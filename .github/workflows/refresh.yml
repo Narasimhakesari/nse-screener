@@ -11,13 +11,19 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: pip install pandas numpy
+      - name: Restore cached NSE daily files (about 5 years, used for seasonality)
+        uses: actions/cache@v4
+        with:
+          path: wd/bhav
+          key: bhav-${{ github.run_id }}
+          restore-keys: bhav-
       - name: Rebuild data
         run: |
           mkdir -p wd
