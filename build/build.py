@@ -145,6 +145,33 @@ tomF=TO.rolling(60,min_periods=40).median(); liqF=tomF.where(C>=10).rank(axis=1,
 mqF=((C.shift(21)/C.shift(252)-1)/(ret.rolling(126,min_periods=100).std()*252**.5)).where(liqF&C.shift(252).notna())
 mrF=mqF.rank(axis=1,ascending=False)
 TRULES=[('breakout',liqF&BRK),('momtrend',(mrF<=30)&(C>s50)&(C.shift(1)<=s50.shift(1))),('new30',(mrF<=30)&~(mrF.shift(1)<=30))]
+# Monthly momentum trade (tested in build/backtest_momentum.py): at each month-end buy the stocks that just entered
+# the top 30, at the next day's open; 10% stop; sell at the open after the next month-end.
+dts=C.index
+_nb=pd.Timestamp(dts[-1])+pd.offsets.BDay(1)
+MEs=[d for d in pd.Series(dts,index=dts).groupby([dts.year,dts.month]).last()]
+MEs=[d for d in MEs if d!=dts[-1] or _nb.month!=dts[-1].month]   # the last date counts only if the next weekday is a new month
+MOM=None
+if len(MEs)>=2:
+    lme,pme=MEs[-1],MEs[-2]
+    newS=[s_ for s_ in mrF.columns if mrF.at[lme,s_]<=30 and not (mrF.at[pme,s_]<=30)]
+    li=dts.get_loc(lme); bdi=li+1
+    trades=[]
+    for s_ in sorted(newS,key=lambda z:mrF.at[lme,z]):
+        buy=O.iat[bdi,O.columns.get_loc(s_)] if bdi<len(dts) else np.nan
+        t=dict(sym=s_,rankAtReview=int(mrF.at[lme,s_]),closeAtReview=r2(C.at[lme,s_]))
+        if np.isfinite(buy):
+            stop=buy*0.9; lows=L[s_].iloc[bdi:]; opens=O[s_].iloc[bdi:]
+            hit=[k for k in range(len(lows)) if np.isfinite(lows.iloc[k]) and lows.iloc[k]<=stop]
+            t.update(buy=r2(buy),stop=r2(stop))
+            if hit:
+                k=hit[0]; o=opens.iloc[k]; fill=o if (k>0 and np.isfinite(o) and o<=stop) else stop
+                t.update(stopped=f"{lows.index[k]:%Y-%m-%d}",exit=r2(fill))
+        trades.append(t)
+    MOM=dict(review=f"{lme:%Y-%m-%d}",prevReview=f"{pme:%Y-%m-%d}",buyDate=(f"{dts[bdi]:%Y-%m-%d}" if bdi<len(dts) else None),
+             reviewIsToday=bool(lme==dts[-1]),trades=trades,top30AtReview=[z for z in mrF.loc[lme].dropna().sort_values().index[:30]],
+             top30Now=[z for z in mrF.iloc[-1].dropna().sort_values().index[:30]],
+             top30PrevReview=[z for z in mrF.loc[pme].dropna().sort_values().index[:30]])
 TRADE={}
 for k_ in (0,1,2):
     i_=len(C)-1-k_
@@ -196,7 +223,7 @@ if os.path.exists(fp):
             except Exception: scasof=f"{asof:%d %b %Y}"
         else: print('fundamentals.csv skipped: no "NSE Code" or "Symbol" column')
     except Exception as e: print('fundamentals.csv skipped:',e)
-out=dict(sc=SC,scAsof=scasof,asof=f"{asof:%d %b %Y}",built=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'),dates=[f"{d:%Y-%m-%d}" for d in C.index[-120:]],stocks=stocks,bt=bt,ev=EV,tmon=int(tmon))
+out=dict(sc=SC,scAsof=scasof,asof=f"{asof:%d %b %Y}",built=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'),dates=[f"{d:%Y-%m-%d}" for d in C.index[-120:]],stocks=stocks,bt=bt,ev=EV,tmon=int(tmon),mom=MOM)
 if os.environ.get('DUMP'): pd.to_pickle(dict(O=O,C=C,H=H,L=L,V=V,TO=TO,U=U,s50=s50,s200=s200,e20=e20,rsi=rsi,off=off,ts=ts,BRK=BRK,TIGHT=TIGHT,PULL=PULL,MR=MR,MX=MX,breadth=breadth,bavg=bavg),f"{WD}/mats.pkl")
 json.dump(out,open(f"{WD}/data.json",'w'),separators=(',',':'),ensure_ascii=False)
 buys=sorted([x for x in stocks if x['mrank'] and x['mrank']<=30],key=lambda x:x['mrank'])

@@ -111,6 +111,13 @@ select,input[type=search],input[type=number]{font:inherit;font-size:14px;padding
 .waitchip{white-space:nowrap;margin-top:4px;font-size:11px!important;color:var(--warn-ink);background:var(--warn-bg);border-radius:999px;padding:1px 7px;display:inline-block!important}
 .caution{background:var(--warn-bg);color:var(--ink);border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
 .caution b{color:var(--warn-ink)}
+.rulebox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:1.3fr 1fr;gap:10px 28px;font-size:14px;color:var(--ink2)}
+.rulebox ol{margin:6px 0 0;padding-left:20px}.rulebox li{margin:4px 0}.rulebox b{color:var(--ink)}
+.rulebox .next{font:800 30px/1.1 var(--display);color:var(--ink);letter-spacing:-.02em}
+.stat{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:8px}.stat b{text-align:right}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunk);color:var(--ink2);margin-top:6px}
+.tag.trade{background:var(--good-bg);color:var(--gain)}.tag.new{background:var(--brand-soft);color:var(--brand)}.tag.out{background:var(--bad-bg);color:var(--loss)}
+@media (max-width:820px){.rulebox{grid-template-columns:1fr}}
 .tradeinfo{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 12px;font-size:14px;color:var(--ink2)}
 .tradeinfo ul{margin:6px 0 8px;padding-left:18px}.tradeinfo li{margin:3px 0}.tradeinfo b{color:var(--ink)}
 .tplan{display:grid;grid-template-columns:repeat(4,auto);gap:4px 16px;font-size:14px}.tplan small{display:block;font-size:11.5px;color:var(--muted)}.tplan b{font-weight:600;white-space:nowrap}
@@ -251,35 +258,25 @@ dialog.drawer[open]{animation:slide .22s ease-out}
 
   <div class="hero">
     <div>
-      <h1 id="headline">Today's best-scoring NSE stocks</h1>
-      <p class="lede">The agent reads every actively traded NSE stock after each market close and scores it on six things: momentum, trend, company results, seasonality, news and swing setups. Pick how you invest and it re-ranks the list. Tap any stock to see why.</p>
+      <h1 id="headline">Monthly momentum trades on NSE</h1>
+      <p class="lede">Once a month the agent finds the stocks that have just joined the 30 strongest of the 300 most-traded NSE stocks. You buy them, set a 10% stop-loss, and sell a month later. Every night it updates prices, stops, news and company numbers. Tap any stock to see why it is there.</p>
     </div>
     <div class="mood" id="mood" aria-live="polite"></div>
   </div>
 
-  <div role="group" aria-label="How do you invest?">
-    <div class="styles" id="styles"></div>
-  </div>
-  <div class="toolbar">
-    <div class="seg" id="uni" role="group" aria-label="Which stocks to rank">
-      <button type="button" data-u="liq">300 most-traded</button><button type="button" data-u="all">All stocks</button><button type="button" data-u="watch">My watchlist</button>
-    </div>
-    <label>Sector <select id="sector"><option value="">All sectors</option></select></label>
-    <button type="button" class="linkbtn" id="wtoggle" aria-expanded="false" aria-controls="weights">Adjust the weights</button>
-  </div>
-  <div class="weights" id="weights"></div>
-
-  <div class="caution" id="caution" hidden><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;margin-top:1px"><path d="M12 3l10 18H2z" fill="var(--mari)"/></svg><p><b>The market is cautious, so the tested model is holding cash.</b> In the backtest, waiting at times like this cut the worst fall from about 30% to about 4%, for about 5% a year less return. Use this list to watch. If you buy anyway, use half-size positions and stop-losses.</p></div>
-  <div class="tradeinfo" id="tradeinfo" hidden></div>
-  <div class="legend" id="legend" aria-label="Score colours"></div>
+  <div class="caution" id="caution" hidden><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;margin-top:1px"><path d="M12 3l10 18H2z" fill="var(--mari)"/></svg><p><b>The market is cautious.</b> In the test, this rule still made money in cautious markets, but about a third as much (+1.1% a trade against +3.3%). Consider half-size positions until the mood turns healthy.</p></div>
+  <div class="rulebox" id="rulebox"></div>
+  <div class="sechead" style="margin-top:22px"><h2>This month's trades</h2><p id="tradesnote"></p></div>
+  <ol class="picks" id="trades"></ol>
+  <div class="sechead" style="margin-top:34px"><h2>Today's top 30 by momentum</h2><p>Stocks marked new will be bought at the next review if they are still in the top 30 then.</p></div>
   <ol class="picks" id="picks"></ol>
 
   <section aria-labelledby="h-how">
     <div class="sechead"><h2 id="h-how">How to use it</h2></div>
     <ol class="steps">
-      <li><span class="n">1</span><div><h3>Choose your style</h3><p>Momentum is the default because it did best in testing. The other styles add trend, seasonality, chart setups or company results; each card shows how it did.</p></div></li>
-      <li><span class="n">2</span><div><h3>Open a stock and read why</h3><p>Each stock shows what lifted its score, what to watch out for, its recent news and how it has done in the coming month in past years.</p></div></li>
-      <li><span class="n">3</span><div><h3>Plan the trade, then review monthly</h3><p>Use the stop-loss and position-size calculator so one bad trade costs about 1% of your money. Re-check the list after each month-end; sell what drops out.</p></div></li>
+      <li><span class="n">1</span><div><h3>Wait for the month-end review</h3><p>On the last trading day of the month the agent picks the stocks that just joined the top 30. With alerts on, you get the list that evening.</p></div></li>
+      <li><span class="n">2</span><div><h3>Buy at the open, set the stop</h3><p>Buy each one next morning in equal amounts and place a stop-loss 10% below your price. Size it so one stop costs about 1% of your money.</p></div></li>
+      <li><span class="n">3</span><div><h3>Sell after the next review</h3><p>At the next month-end, sell last month's trades at the open and buy the new ones. Don't move the stop or sell early; the test didn't.</p></div></li>
     </ol>
   </section>
 
@@ -290,10 +287,10 @@ dialog.drawer[open]{animation:slide .22s ease-out}
   </section>
 
   <section aria-labelledby="h-ev">
-    <div class="sechead"><h2 id="h-ev">Can you trust the score?</h2><p>Each part of the score was checked against past NSE prices where history exists. The default follows the evidence: what worked best counts most.</p></div>
+    <div class="sechead"><h2 id="h-ev">Can you trust the score?</h2><p>Every rule on this page was tested on past NSE prices before it was kept. Here is what the tests showed.</p></div>
     <div class="ev" id="ev"></div>
     <div class="chartbox" id="track"></div>
-    <div class="chartbox"><h3 style="margin-bottom:4px">₹10 lakh in the Momentum 30 model against an equal-weight basket (original study)</h3><p class="muted" id="btnote" style="font-size:13px"></p><div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink2);margin:8px 0 4px"><span><i style="background:var(--f1)"></i>Momentum 30</span><span><i style="background:var(--f2)"></i>Momentum 30, in cash while market breadth falls</span><span><i style="background:var(--f3)"></i>300 most-traded stocks, equal weight</span></div><div id="eqc"></div><div class="tip" id="eqtip"></div>
+    <div class="chartbox"><h3 style="margin-bottom:4px">The momentum idea over a longer period: ₹10 lakh in the Momentum 30 model against an equal-weight basket</h3><p class="muted" id="btnote" style="font-size:13px"></p><div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink2);margin:8px 0 4px"><span><i style="background:var(--f1)"></i>Momentum 30</span><span><i style="background:var(--f2)"></i>Momentum 30, in cash while market breadth falls</span><span><i style="background:var(--f3)"></i>300 most-traded stocks, equal weight</span></div><div id="eqc"></div><div class="tip" id="eqtip"></div>
       <div style="overflow-x:auto"><table class="bt" id="bt0"></table><table class="bt" id="bt1"></table></div>
       <details><summary>Robustness checks and rules that failed</summary><div style="overflow-x:auto"><table class="bt" id="bt2"></table><table class="bt" id="bt3"></table></div>
         <p class="muted" style="font-size:13px;margin-top:8px">Stocks that later delisted are included up to their last trading day. Five years includes a strong 2023 bull run, and momentum can fall hard when market leadership changes. Costs are 0.2% per round trip unless stated. Past results do not predict future ones.</p></details>
@@ -328,7 +325,7 @@ try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'
 catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
 
 const opt=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
-const [AUTO,SBT,HIST,TBT]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json'),opt('trades_bt.json')]);
+const [AUTO,SBT,HIST,TBT,MBT]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json'),opt('trades_bt.json'),opt('mom_bt.json')]);
 const TR={breakout:{name:'Breakout',long:'Broke to a 50-day high on 1.5 times normal volume',bt:'Breakout: 50-day high on 1.5x volume',order:0},
   momtrend:{name:'Momentum + trend turn',long:'A top-30 momentum stock closed back above its 50-day average',bt:'Momentum top 30 + trend turn above 50-day',order:1},
   new30:{name:'New momentum leader',long:'Just entered the top 30 for 12-month momentum',bt:'Momentum top 30 (newly entered)',order:2}};
@@ -378,11 +375,12 @@ const STY={
   swing:{name:'Swing trade',bt:'Swing trade',desc:'Up to 40 days: 20% target, 10% stop',gate:false,trade:true,w:{mom:100,trend:0,fund:0,seas:0,news:0,swing:0}},
   longterm:{name:'Long-term',bt:null,desc:'Momentum plus company results and news',gate:true,w:{mom:60,trend:0,fund:30,seas:0,news:10,swing:0}}};
 const btOf=k=>{if(STY[k].trade){const b=trStat('breakout');return b?`Tested: ${pct(b.avg)} a trade, wins ${Math.round(b.win)}%`:'Tested on 5 years of trades';}const b=SBT.styles&&STY[k].bt&&SBT.styles[STY[k].bt];return b?`Tested: ${b.cagr}% a year, worst fall ${b.dd}%`:'Not testable: needs company history';};
-let st={style:store.get('nsaStyle2','momentum'),uni:'liq',sector:'',q:'',sort:'score',dir:-1,lim:10,tlim:50,custom:null};
+let st={style:'momentum',uni:'liq',sector:'',q:'',sort:'score',dir:-1,lim:10,tlim:50,custom:null};
 if(!STY[st.style])st.style='momentum';
 let WATCH=new Set(store.get('nsaWatch',[]));
 const W=()=>st.custom||STY[st.style].w;
-function valPen(s){const pe=s.sc?.pe??s.f50?.pe;if(s.sc&&s.sc.np!=null&&s.sc.np<0)return [10,'loss-making'];if(pe==null||!isFinite(pe))return [0,''];if(pe>200)return [10,`P/E ${Math.round(pe)}`];if(pe>100)return [5,`P/E ${Math.round(pe)}`];return [0,''];}
+function valPen(s){return [0,''];}
+function valPenOld(s){const pe=s.sc?.pe??s.f50?.pe;if(s.sc&&s.sc.np!=null&&s.sc.np<0)return [10,'loss-making'];if(pe==null||!isFinite(pe))return [0,''];if(pe>200)return [10,`P/E ${Math.round(pe)}`];if(pe>100)return [5,`P/E ${Math.round(pe)}`];return [0,''];}
 function score(s){const w=W();let sum=0,tw=0;const parts={};for(const f of F){const wt=w[f.k]||0;if(!wt)continue;const v=s[f.f];const val=v==null||!isFinite(v)?50:v;parts[f.k]={v:val,missing:v==null,w:wt};sum+=val*wt;tw+=wt;}
   const [pen,why]=valPen(s);s.pen=pen;s.penWhy=why;s.score=Math.max(0,(tw?sum/tw:0)-pen);s.parts=parts;s.tw=tw;return s.score;}
 const gated=()=>st.custom?true:STY[st.style].gate;
@@ -434,15 +432,6 @@ $('#newsAsof').textContent=AUTO.asof||ST.newsAsof||ST.fundAsof||'';
    <div class="lg"><span><i style="background:var(--f1)"></i>Stocks above 200-day average</span><span><i style="background:var(--f2)"></i>Its 50-day average</span></div>`;})();
 
 // ---------- controls ----------
-$('#styles').innerHTML=Object.entries(STY).map(([k,v])=>`<button type="button" class="style" data-s="${k}"><b>${v.name}${k==='momentum'?' <small style="font:600 11px var(--body);color:var(--gain)">Default</small>':''}</b><span>${v.desc}</span><span class="bt">${btOf(k)}</span></button>`).join('');
-$('#legend').innerHTML=F.map(f=>`<span><i class="sw" style="background:${f.c}"></i>${f.name}</span>`).join('')+'<span class="muted">Bar length = score out of 100</span>';
-[...new Set(S.map(s=>s.sector))].sort().forEach(x=>{const o=document.createElement('option');o.value=o.textContent=x;$('#sector').appendChild(o);});
-function drawWeights(){const w=W();$('#weights').innerHTML=F.map(f=>`<label><b><i class="sw" style="background:${f.c}"></i>${f.name} <span class="muted" style="margin-left:auto;font-weight:500" id="wv-${f.k}">${w[f.k]||0}</span></b><input type="range" min="0" max="60" step="5" value="${w[f.k]||0}" data-k="${f.k}" aria-label="${f.name} weight"></label>`).join('')+`<p class="muted" style="font-size:12.5px;align-self:end">Changing a slider switches to a custom mix. Pick a style above to reset.</p>`;}
-$('#weights').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;st.custom=Object.assign({},W(),{[k]:+e.target.value});$('#wv-'+k).textContent=e.target.value;renderAll();});
-$('#wtoggle').addEventListener('click',()=>{const o=$('#weights').classList.toggle('open');$('#wtoggle').setAttribute('aria-expanded',o);if(o)drawWeights();});
-$('#styles').addEventListener('click',e=>{const b=e.target.closest('.style');if(!b)return;st.style=b.dataset.s;st.custom=null;store.set('nsaStyle2',st.style);if($('#weights').classList.contains('open'))drawWeights();renderAll();});
-$('#uni').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.uni=b.dataset.u;st.lim=10;renderAll();});
-$('#sector').addEventListener('change',e=>{st.sector=e.target.value;st.lim=10;renderAll();});
 $('#q').addEventListener('input',e=>{st.q=e.target.value;st.tlim=50;renderTable();});
 
 // ---------- small charts ----------
@@ -485,8 +474,9 @@ function renderPicks(){
       <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')+
     (P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');
 }
-$('#picks').addEventListener('click',e=>{if(e.target.id==='morePicks'){st.lim+=15;renderPicks();return;}const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
-$('#picks').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('.pick');if(li){e.preventDefault();openStock(li.dataset.sym);}}});
+for(const id of ['#picks','#trades']){$(id).addEventListener('click',e=>{const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
+  $(id).addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('.pick');if(li){e.preventDefault();openStock(li.dataset.sym);}}});}
+
 
 // ---------- table ----------
 const COLS=[['name','Stock','l'],['score','Score',''],['verdict','Verdict','l'],['fMom','Momentum',''],['fTrend','Trend',''],['fFund','Results',''],['fSeas','Season',''],['news','News','l'],['setup','Setup','l'],['close','Price ₹',''],['chg','Today',''],['r6m','6 months','']];
@@ -510,7 +500,44 @@ $('#tbl tbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-
 $('#tbl tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr[data-sym]');if(tr)openStock(tr.dataset.sym);}});
 $('#tmoreBtn').addEventListener('click',()=>{st.tlim+=50;renderTable();});
 
-function renderAll(){S.forEach(score);renderPicks();renderTable();}
+function renderAll(){S.forEach(score);renderMom();renderTable();}
+const MOM=D.mom||null;
+const nextReview=()=>{const t=new Date(D.dates[D.dates.length-1]+'T00:00:00');const e=new Date(t.getFullYear(),t.getMonth()+1,0);while(e.getDay()===0||e.getDay()===6)e.setDate(e.getDate()-1);if(MOM&&MOM.reviewIsToday)return t;return e;};
+const dlong=x=>x.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+const dd=t=>new Date(t+'T00:00:00');
+function renderMom(){
+  $('#caution').hidden=!!BT.rising;
+  const MB=(MBT.rows||{}),rule=Object.values(MB)[0],base=Object.values(MB)[3];const nr=nextReview(),today=dd(D.dates[D.dates.length-1]);
+  let bd=0;{const x=new Date(today);while(x<nr){x.setDate(x.getDate()+1);if(x.getDay()&&x.getDay()<6)bd++;}}
+  $('#rulebox').innerHTML=`<div><b>The rule</b><ol><li>On the last trading day of each month, after the close, the agent ranks the 300 most-traded stocks by their 12-month rise (skipping the last month), adjusted for how jumpy they are.</li><li>Buy the stocks that have just entered the top 30, at the next morning's open, in equal amounts.</li><li>Put a stop-loss 10% below your buy price.</li><li>Sell at the open after the next month-end review, whatever the price.</li></ol>${rule?`<p style="margin-top:8px">Tested ${new Date(MBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(MBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}, after 0.3% costs: <b>${pct(rule.avg)} a trade</b> on average, ${Math.round(rule.win)}% of trades won, ${rule.months_up} of ${rule.months} months were positive, worst trade ${rule.worst}%. Buying any of the 300 stocks the same way made ${pct(base.avg)} a trade.</p>`:''}</div>
+   <div><b>${MOM&&MOM.reviewIsToday?'Review is today':'Next review'}</b><div class="next">${dlong(nr)}</div><p>${MOM&&MOM.reviewIsToday?'Buy the new trades at tomorrow morning\'s open and sell last month\'s.':`${bd} trading days away (earlier if that day is a market holiday). Until then, hold this month's trades and keep the stops in place.`}</p>${rule?`<div class="stat"><span>Healthy market</span><b>${pct(rule.healthy)} a trade</b><span>Cautious market</span><b>${pct(rule.cautious)} a trade</b><span>Typical hold</span><b>${Math.round(rule.days)} trading days</b></div>`:''}</div>`;
+  // this month's trades
+  const T=(MOM&&MOM.trades)||[];
+  if(!T.length){$('#trades').innerHTML='<li class="empty">No trades recorded for this month yet.</li>';}
+  else{const rs=T.map(t=>{const s=BY[t.sym];if(!s||!t.buy)return null;return t.stopped?(t.exit/t.buy-1)*100:(s.close/t.buy-1)*100;}).filter(x=>x!=null);
+    const nstop=T.filter(t=>t.stopped).length;
+    $('#tradesnote').innerHTML=`Picked at the ${dlong(dd(MOM.review))} review and bought at the open on ${dlong(dd(MOM.buyDate))}. ${T.length} trades: ${T.length-nstop} open, ${nstop} stopped out. Average so far <b class="${cls(rs.reduce((a,b)=>a+b,0)/rs.length)}">${pct(rs.reduce((a,b)=>a+b,0)/rs.length)}</b>, before costs.`;
+    $('#trades').innerHTML=T.map((t,i)=>{const s=BY[t.sym];if(!s)return '';const pl=t.stopped?(t.exit/t.buy-1)*100:(s.close/t.buy-1)*100;const nz=s.news;
+      return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${esc(s.name)}, ${t.stopped?'stopped out':'open trade'}, ${pct(pl)}">
+       <div class="rk" aria-hidden="true">${i+1}</div>
+       <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
+        <p class="why">${t.stopped?`Stopped out on ${dlong(dd(t.stopped))}, sold near ₹${inr(t.exit)}.`:`Open. Now ₹${inr(s.close)}; stop at ₹${inr(t.stop)} (${pct((t.stop/s.close-1)*100)} from here). Sell at the open after the ${dlong(nr)} review.`}${nz&&nz.tone==='Negative'?` <span class="c">Watch: ${esc(nz.watch||'negative news')}</span>`:''}</p>
+        <span class="tag ${t.stopped?'out':'trade'}">${t.stopped?'Stopped out':'Open trade'}</span></div>
+       <div class="fs tplan"><span><small>Bought at</small><b>₹${inr(t.buy)}</b></span><span><small>Stop −10%</small><b class="down">₹${inr(t.stop)}</b></span><span><small>${t.stopped?'Sold at':'Now'}</small><b>₹${inr(t.stopped?t.exit:s.close)}</b></span><span><small>Rank at review</small><b>${t.rankAtReview} of 300</b></span></div>
+       <div class="score"><b class="${cls(pl)}" style="font-size:28px">${pct(pl)}</b><span class="muted" style="font-weight:500">${t.stopped?'closed':'so far'}</span></div>
+       <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('');}
+  // top 30 now
+  const top=(MOM?MOM.top30Now:[]).map(x=>BY[x]).filter(Boolean),atRev=new Set(MOM?MOM.top30AtReview:[]),inT=new Set(T.map(t=>t.sym));
+  $('#picks').innerHTML=top.map((s,i)=>{const p=pros(s).filter(x=>!x.startsWith('In the tested')).slice(0,2),c=firstCon(s);
+    const tag=inT.has(s.sym)?'<span class="tag trade">In this month\'s trades</span>':!atRev.has(s.sym)?'<span class="tag new">New since the review: buy at the next review if still here</span>':'<span class="tag">In the top 30 since before the review</span>';
+    return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${i+1}. ${esc(s.name)}">
+      <div class="rk" aria-hidden="true">${i+1}</div>
+      <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
+        <p class="why">${esc(p.join('. '))}${c?`. <span class="c">Watch: ${esc(c.charAt(0).toLowerCase()+c.slice(1))}</span>`:''}</p>${tag}</div>
+      <div class="fs"><div class="stripcap" style="margin:0"><span>12-month rise ${s.m121==null?'–':pct(s.m121,0)}</span><span>Volatility ${s.vol==null?'–':Math.round(s.vol)+'% a year'}</span></div><div class="strip" style="margin-top:6px"><i style="width:${s.fMom}%;background:var(--f1)"></i></div></div>
+      <div class="score"><b>${Math.round(s.fMom)}</b><span class="muted" style="font-weight:500">momentum score</span></div>
+      <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')||'<li class="empty">No data.</li>';
+}
 
 // ---------- drawer ----------
 const dlg=$('#drawer');
@@ -604,19 +631,18 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
 // ---------- evidence ----------
 (function(){const sx=EV.setups||[],se=EV.seas||{},m=(BT.main||[])[0]||{},b=(BT.main||[])[2]||{};const best=sx.slice().sort((a,b)=>(b.avg||0)-(a.avg||0));
   const SS=SBT.styles||{},m30=SS['Momentum 30 (the tested model)']||{cagr:m.cagr,dd:m.dd},bk=SS['Basket: 300 most-traded']||{cagr:b.cagr},bal=SS['Balanced']||{},per=SBT.start?`${new Date(SBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(SBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}`:'the test period';
+  const MR_=(MBT.rows||{}),rl=Object.values(MR_)[0]||{},nst=Object.values(MR_)[1]||{},a30=Object.values(MR_)[2]||{},bs=Object.values(MR_)[3]||{};
   const items=[
-   ['Momentum','var(--f1)','g-strong','Strong evidence',`Buying the 30 strongest stocks each month returned ${m30.cagr}% a year from ${per}, against ${bk.cagr}% for the 300 most-traded stocks. Adding the other factors did not beat it, so it is the default.`],
-   ['Market mood','var(--ink2)','g-strong','Strong evidence',`Holding cash while fewer stocks are in uptrends cut the worst fall from about ${Math.abs(Math.round(m30.dd||30))}% to about ${Math.abs(Math.round((m30.cautious||{}).dd||4))}%, for about ${Math.round((m30.cagr||0)-((m30.cautious||{}).cagr||0))}% a year less return.`],
-   ['Seasonality','var(--f4)','g-some','Some evidence',`Stocks with the best history for the coming month beat those with the worst in ${se.beat} of ${se.months} months. Added to momentum it made little difference, so it has a small weight. It needs at least four years of history.`],
-   ['Trend','var(--f2)','g-weak','Weak evidence',`Skipping stocks below their 200-day average cost about 3% a year in the test, because strong stocks often dip and recover. The Momentum style does not use it.`],
-   ['Swing setups','var(--f6)','g-weak','Weak evidence',`Over 20 days, ${best.map(x=>`${x.label.toLowerCase()}s beat the market by ${pct(x.avg,2)}`).join(', ')} on average. Useful for timing an entry, not for picking stocks.`],
-   ['Company results and news','var(--f3)','g-none','Not testable here',`There is no history of these to test against. They are used as checks and warnings, and in the Long-term style. Very high P/E or losses cut the score by 5 to 10 points; this rule is also untested.`]];
+   ['Momentum','var(--f1)','g-strong','Strong evidence',`Holding the 30 strongest stocks returned ${m30.cagr}% a year from ${per}, against ${bk.cagr}% for the 300 most-traded stocks. Blends with trend, seasonality, chart setups or company scores did worse.`],
+   ['This trade rule','var(--f1)','g-strong','Tested',`Buying only the new entries and selling a month later made ${pct(rl.avg)} a trade, against ${pct(a30.avg)} for buying all 30 and ${pct(bs.avg)} for any of the 300. Without the stop it made ${pct(nst.avg)}, but the worst trade lost ${Math.abs(nst.worst||0)}% instead of ${Math.abs(rl.worst||0)}%.`],
+   ['Market mood','var(--ink2)','g-some','Some evidence',`The rule made ${pct(rl.healthy)} a trade when more stocks were joining uptrends and ${pct(rl.cautious)} when fewer were. It still made money in cautious markets, so the mood sets your position size, not whether you trade.`],
+   ['What was dropped','var(--muted)','g-none','Tested or untestable',`Trend filters, seasonality, swing setups, target/stop exits, trailing stops and a valuation penalty were each tested and did not improve results; company results and news cannot be tested here. They stay on each stock's page as information.`]];
   $('#ev').innerHTML=items.map(([t,c,g,gl,p])=>`<div><h3><i class="sw" style="background:${c}"></i>${t}<span class="grade ${g}">${gl}</span></h3><p>${esc(p)}</p></div>`).join('');
   const pd=x=>new Date(x).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
   $('#btnote').textContent=`Monthly portfolio simulation, ${pd(BT.start)} to ${pd(BT.end)}, on every stock that met the liquidity rule at the time. Log scale.`;
   const sg=x=>`<span class="${cls(x)}">${pct(x)}</span>`,yrs=[2022,2023,2024,2025,2026];
   const tb=(id,cap,rows)=>{$(id).innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">${cap}</caption><thead><tr><th>Strategy</th><th>Yearly return</th><th>Worst fall</th>${yrs.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(r=>`<tr><td>${esc(r.label)}</td><td><b>${sg(r.cagr)}</b></td><td>${r.dd.toFixed(1)}%</td>${(r.years||[]).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';};
-  if(SBT.styles){const rows=Object.entries(SBT.styles);$('#bt0').innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">How each style on this page did, ${per} (top 30 each month, 0.2% costs)</caption><thead><tr><th>Style</th><th>Yearly return</th><th>Worst fall</th><th>Cautious version</th>${Object.keys(rows[0][1].years).map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td><b>${sg(v.cagr)}</b></td><td>${v.dd.toFixed(1)}%</td><td>${sg(v.cautious.cagr)}, worst ${v.cautious.dd.toFixed(1)}%</td>${Object.values(v.years).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';}
+  if(MBT.rows){const rows=Object.entries(MBT.rows);$('#bt0').innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">The monthly trade rule and its alternatives, ${new Date(MBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(MBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}, average per trade after 0.3% costs</caption><thead><tr><th>Rule</th><th>Per trade</th><th>Won</th><th>Worst trade</th><th>Healthy / cautious market</th>${Object.keys(rows[0][1].years).map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td><b>${sg(v.avg)}</b></td><td>${Math.round(v.win)}%</td><td>${v.worst}%</td><td>${sg(v.healthy)} / ${sg(v.cautious)}</td>${Object.values(v.years).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';}
   tb('#bt1','The original Momentum 30 study, Dec 2021 to Nov 2026, against plain baskets',BT.main||[]);tb('#bt2','Does it survive changes to the settings?',BT.robust||[]);tb('#bt3','Rules that failed the same test',BT.failed||[]);
   const c=BT.curves;if(!c)return;const N=c.dates.length,EW=1000,EH=280,mm={l:6,r:70,t:10,b:22},ser=[['m30','var(--f1)','Momentum 30'],['m30g','var(--f2)','In cash while breadth falls'],['b300','var(--f3)','Basket']];
   const mx=Math.max(...c.m30,...c.m30g,...c.b300),mn=Math.min(...c.m30,...c.m30g,...c.b300),EX=i=>mm.l+i*(EW-mm.l-mm.r)/(N-1),EY=v=>mm.t+(Math.log(mx*1.05)-Math.log(v))*(EH-mm.t-mm.b)/(Math.log(mx*1.05)-Math.log(mn*.95));
@@ -629,18 +655,12 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
   es.addEventListener('pointerleave',()=>{et.style.display='none';ex.setAttribute('visibility','hidden');});
 })();
 
-// ---------- live track record ----------
-(function(){const days=(HIST.days||[]),bench=Object.fromEntries((HIST.bench||[]).map(x=>[x[0],x[1]])),bl=(HIST.bench||[]).slice(-1)[0];
-  const fmtD=d=>new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-  if(!days.length){$('#track').innerHTML='<h3>Live track record</h3><p class="muted" style="font-size:14px;margin-top:6px">Starts with the first nightly run.</p>';return;}
-  const today=D.dates[D.dates.length-1],rows=[];
-  days.forEach((d,i)=>{const age=D.dates.length-1-D.dates.indexOf(d.date);if(d.date===today)return;
-    const rs=d.top10.map(([sym,px])=>BY[sym]&&px?BY[sym].close/px-1:null).filter(x=>x!=null);if(!rs.length)return;
-    const pr=rs.reduce((a,b)=>a+b,0)/rs.length*100,bm=bench[d.date]&&bl?(bl[1]/bench[d.date]-1)*100:null;rows.push({d,pr,bm});});
-  const pick=rows.filter((r,i)=>i===0||i===rows.length-1||i%5===0).reverse().slice(0,12);
-  $('#track').innerHTML=`<h3>Live track record</h3><p class="muted" style="font-size:13px;margin-top:4px">Every night the default top 10 is saved. This shows how each saved list has done since, against the 300 most-traded stocks in equal amounts. Tracking started ${fmtD(days[0].date)}. No costs, and prices are not adjusted for dividends.</p>`+
-   (pick.length?`<div style="overflow-x:auto"><table class="bt"><thead><tr><th>Top 10 saved on</th><th>Since then</th><th>300 most-traded</th><th>Difference</th><th>Market mood that day</th></tr></thead><tbody>${pick.map(r=>`<tr><td>${fmtD(r.d.date)}</td><td>${`<span class="${cls(r.pr)}">${pct(r.pr)}</span>`}</td><td>${r.bm==null?'–':`<span class="${cls(r.bm)}">${pct(r.bm)}</span>`}</td><td>${r.bm==null?'–':`<b class="${cls(r.pr-r.bm)}">${pct(r.pr-r.bm)}</b>`}</td><td>${r.d.rising?'Healthy':'Cautious'}</td></tr>`).join('')}</tbody></table></div>`
-   :`<p class="ink2" style="font-size:14px;margin-top:10px">The first results appear after the next trading day. Give it a few months before reading much into it.</p>`);
+// ---------- live track record (monthly trades) ----------
+(function(){const M_=HIST.months||{},ks=Object.keys(M_).sort().reverse();
+  const rows=ks.map(k=>{const m=M_[k],tr=m.trades||[],done=!!m.closed;const rs=tr.map(t=>t.ret!=null?t.ret:(BY[t.sym]&&t.buy?((t.stopped?t.exit:BY[t.sym].close)/t.buy-1)*100:null)).filter(x=>x!=null);
+    const av=rs.length?rs.reduce((a,b)=>a+b,0)/rs.length:null;return `<tr><td>${dlong(dd(k))}</td><td>${tr.length}</td><td>${av==null?'–':`<b class="${cls(av)}">${pct(av)}</b>`}</td><td>${rs.filter(x=>x>0).length} of ${rs.length}</td><td>${tr.filter(t=>t.stopped).length}</td><td>${done?'Closed':'Open'}</td></tr>`;}).join('');
+  $('#track').innerHTML=`<h3>Live track record</h3><p class="muted" style="font-size:13px;margin-top:4px">Each month's trades as the rule picked them, recorded by the nightly job. Returns are from the opening buy price to the stop or the review-day close, before costs.</p>`+
+   (rows?`<div style="overflow-x:auto"><table class="bt"><thead><tr><th>Review</th><th>Trades</th><th>Average</th><th>Winners</th><th>Stopped out</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="ink2" style="font-size:14px;margin-top:10px">Starts with the next nightly run.</p>');
 })();
 
 renderAll();

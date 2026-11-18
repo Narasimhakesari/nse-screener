@@ -1,0 +1,79 @@
+{
+ "built": "2026-11-18T17:03Z",
+ "start": "2022-09-30",
+ "end": "2026-10-30",
+ "rows": {
+  "New top-30 entries, 1 month, 10% stop (the site's rule)": {
+   "n": 528,
+   "avg": 2.11,
+   "win": 50.4,
+   "days": 18.0,
+   "healthy": 3.26,
+   "cautious": 1.1,
+   "worst": -20.9,
+   "months_up": 30,
+   "months": 49,
+   "years": {
+    "2022": 0.65,
+    "2023": 5.99,
+    "2024": -1.35,
+    "2025": 0.68,
+    "2026": 4.5
+   }
+  },
+  "New top-30 entries, 1 month, no stop": {
+   "n": 526,
+   "avg": 2.55,
+   "win": 54.9,
+   "days": 21.5,
+   "healthy": 3.94,
+   "cautious": 1.32,
+   "worst": -40.1,
+   "months_up": 34,
+   "months": 49,
+   "years": {
+    "2022": 1.28,
+    "2023": 6.2,
+    "2024": -0.09,
+    "2025": 0.81,
+    "2026": 4.43
+   }
+  },
+  "All of the top 30, 1 month, 10% stop": {
+   "n": 1462,
+   "avg": 1.14,
+   "win": 48.1,
+   "days": 17.5,
+   "healthy": 2.61,
+   "cautious": -0.25,
+   "worst": -22.3,
+   "months_up": 28,
+   "months": 49,
+   "years": {
+    "2022": -0.83,
+    "2023": 4.97,
+    "2024": -1.53,
+    "2025": -0.62,
+    "2026": 2.87
+   }
+  },
+  "Any of the 300 most-traded, 1 month, 10% stop (baseline)": {
+   "n": 13804,
+   "avg": 0.57,
+   "win": 48.4,
+   "days": 18.8,
+   "healthy": 1.48,
+   "cautious": -0.3,
+   "worst": -28.1,
+   "months_up": 26,
+   "months": 49,
+   "years": {
+    "2022": -0.46,
+    "2023": 3.73,
+    "2024": -1.43,
+    "2025": -0.28,
+    "2026": 0.53
+   }
+  }
+ }
+}

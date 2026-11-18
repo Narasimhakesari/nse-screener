@@ -1,26 +1,15 @@
-# NSE Stock Agent
+# NSE Stock Agent: monthly momentum trades
 
-A static website that ranks NSE stocks after every market close and explains each pick in plain words.
+A static website that runs one tested rule on NSE stocks and updates itself every weekday night.
 
-Each stock gets a score out of 100 from six factors, each ranked against all other stocks:
+**The rule.** On the last trading day of each month, rank the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by their 12-month return skipping the last month, divided by volatility. Buy the stocks that have just entered the top 30 at the next day's open, in equal amounts, with a stop-loss 10% below the buy price. Sell at the open after the next month-end review.
 
-| Factor | What it measures | Evidence from 5 years of NSE data |
-|---|---|---|
-| Momentum | 12-month return (skipping the last month) divided by volatility | Strong: the Momentum 30 model returned about 25% a year against about 15% for an equal-weight basket |
-| Trend | Price against its 20, 50 and 200-day averages, RSI, MACD, distance from the 52-week high | Supporting filter |
-| Company results | Profit growth, return on equity and capital, debt, valuation (stocks with fundamentals on file only) | Not testable with the data on file |
-| Seasonality | How the stock has done in the coming calendar month in past years, against the market | Some: the best-history 10% beat the worst 10% in most months |
-| News | Tone of the latest results and announcements, from a web search of the top picks | Not testable |
-| Swing setup | Breakout, tight base or pullback in the last few days | Weak: small edge over 20 days |
+**The test** (`build/backtest_momentum.py`, re-run nightly into `mom_bt.json`): from Sep 2022 to Oct 2026, after 0.3% costs, about +2.1% a trade, 50% of trades won, 30 of 49 months positive, worst trade about −21% (gaps through the stop are filled at the open). Buying all 30 made about +1.1% a trade and buying any of the 300 about +0.6%. Without the stop: +2.6% a trade but a worst trade of −40%. The rule made about +3.3% a trade when market breadth was rising and +1.1% when it was falling, so the page shows market mood as a position-size warning.
 
-Visitors choose a style or set their own weights. **Momentum is the default** because it did best when every style was backtested (`build/backtest_styles.py`, re-run nightly into `styles_bt.json`): from Sep 2022 to Nov 2026 the plain Momentum 30 returned about 27.6% a year against 18.6% for the 300 most-traded stocks, while the blends with the other factors returned about 24–26%. Holding cash while market breadth falls cut the worst fall from about 30% to about 4%, for about 5% a year less return; the page warns when that applies. The other styles (Balanced, Swing trade, Long-term) only rank stocks above their 200-day average. P/E above 100 or 200, or a loss, cuts a score by 5 or 10 points (untested).
-
-## Swing trades (up to 40 days)
-The Swing trade style lists setups from the last 3 trading days, run exactly as tested in `build/backtest_trades.py` (re-run nightly into `trades_bt.json`): buy at the next day's price, sell at +20% or −10%, whichever comes first, or after 40 trading days. Entries: a breakout to a 50-day closing high on 1.5× volume, a stock newly entering the top 30 for momentum, or a top-30 momentum stock closing back above its 50-day average. The test buys at the next day's open and, when a stock gaps past the stop or target, sells at that day's open. From Sep 2022 to Nov 2026 on the 300 most-traded stocks, after 0.3% costs, these averaged +1.1% to +1.7% a trade against +0.8% for random entries, winning 45–48% of the time. Taken only while market breadth was rising they averaged +2.0% to +3.1% (random +1.5%); in falling markets about nothing. Most of the gain came in 2023, and 2022 was negative. Buying near support or on an oversold RSI did no better than random, and holding under about a week made almost nothing.
+**Tested and dropped:** blends with trend, seasonality and chart setups (`build/backtest_styles.py`); a 200-day-average filter; target/stop swing exits and short holds (`build/backtest_trades.py`); trailing stops; a valuation penalty. Company results and news cannot be backtested here; they appear on each stock's page as information.
 
 ## Alerts (optional)
-Every weekday night `build/notify.py` saves the default top 10 to `history.json` (shown on the page as a live track record) and can message you the top 10, what's new or dropped, the market mood and, after each month-end, the Momentum 30 buy and sell list. Add repository secrets (Settings → Secrets and variables → Actions):
-The message also lists the day's new swing setups with their target and stop.
+`build/notify.py` keeps the record of each month's trades in `history.json` (shown on the page as a live track record) and sends a message only when there is something to do: the month-end review (what to sell and buy at the next open), a stop-loss hit, a change in market mood, and a Friday summary of open trades. Add repository secrets (Settings → Secrets and variables → Actions):
 - Telegram: `TELEGRAM_BOT_TOKEN` (create a bot with @BotFather) and `TELEGRAM_CHAT_ID` (send your bot a message, then open `https://api.telegram.org/bot<token>/getUpdates` and copy `chat.id`).
 - Or the free ntfy app: `NTFY_TOPIC`, any long private name you also subscribe to in the app.
 
