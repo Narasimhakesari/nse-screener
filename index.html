@@ -111,6 +111,7 @@ select,input[type=search],input[type=number]{font:inherit;font-size:14px;padding
 .waitchip{white-space:nowrap;margin-top:4px;font-size:11px!important;color:var(--warn-ink);background:var(--warn-bg);border-radius:999px;padding:1px 7px;display:inline-block!important}
 .caution{background:var(--warn-bg);color:var(--ink);border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
 .caution b{color:var(--warn-ink)}
+.closedbox{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 16px}.closedbox summary{font-weight:600;color:var(--ink);cursor:pointer}
 .rulebox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:1.3fr 1fr;gap:10px 28px;font-size:14px;color:var(--ink2)}
 .rulebox ol{margin:6px 0 0;padding-left:20px}.rulebox li{margin:4px 0}.rulebox b{color:var(--ink)}
 .rulebox .next{font:800 30px/1.1 var(--display);color:var(--ink);letter-spacing:-.02em}
@@ -258,25 +259,28 @@ dialog.drawer[open]{animation:slide .22s ease-out}
 
   <div class="hero">
     <div>
-      <h1 id="headline">Monthly momentum trades on NSE</h1>
-      <p class="lede">Once a month the agent finds the stocks that have just joined the 30 strongest of the 300 most-traded NSE stocks. You buy them, set a 10% stop-loss, and sell a month later. Every night it updates prices, stops, news and company numbers. Tap any stock to see why it is there.</p>
+      <h1 id="headline">Momentum trades on NSE</h1>
+      <p class="lede">Every evening the agent checks which stocks have just joined the 30 strongest of the 300 most-traded NSE stocks. Buy them next morning, set a 10% stop-loss, and sell about a month later. It also tracks every open trade, its stop and its news. Tap any stock to see why it is there.</p>
     </div>
     <div class="mood" id="mood" aria-live="polite"></div>
   </div>
 
   <div class="caution" id="caution" hidden><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;margin-top:1px"><path d="M12 3l10 18H2z" fill="var(--mari)"/></svg><p><b>The market is cautious.</b> In the test, this rule still made money in cautious markets, but about a third as much (+1.1% a trade against +3.3%). Consider half-size positions until the mood turns healthy.</p></div>
   <div class="rulebox" id="rulebox"></div>
-  <div class="sechead" style="margin-top:22px"><h2>This month's trades</h2><p id="tradesnote"></p></div>
+  <div class="sechead" style="margin-top:22px"><h2 id="sigh">New signals</h2><p id="signote"></p></div>
+  <ol class="picks" id="signals"></ol>
+  <div class="sechead" style="margin-top:30px"><h2>Open trades</h2><p id="tradesnote"></p></div>
   <ol class="picks" id="trades"></ol>
-  <div class="sechead" style="margin-top:34px"><h2>Today's top 30 by momentum</h2><p>Stocks marked new will be bought at the next review if they are still in the top 30 then.</p></div>
+  <details class="closedbox"><summary id="closedsum">Closed trades</summary><div style="overflow-x:auto"><table class="bt" id="closed"></table></div></details>
+  <div class="sechead" style="margin-top:34px"><h2>Today's top 30 by momentum</h2><p>A stock becomes a signal on the day it enters this list, if it was not in it during the previous 20 trading days.</p></div>
   <ol class="picks" id="picks"></ol>
 
   <section aria-labelledby="h-how">
     <div class="sechead"><h2 id="h-how">How to use it</h2></div>
     <ol class="steps">
-      <li><span class="n">1</span><div><h3>Wait for the month-end review</h3><p>On the last trading day of the month the agent picks the stocks that just joined the top 30. With alerts on, you get the list that evening.</p></div></li>
-      <li><span class="n">2</span><div><h3>Buy at the open, set the stop</h3><p>Buy each one next morning in equal amounts and place a stop-loss 10% below your price. Size it so one stop costs about 1% of your money.</p></div></li>
-      <li><span class="n">3</span><div><h3>Sell after the next review</h3><p>At the next month-end, sell last month's trades at the open and buy the new ones. Don't move the stop or sell early; the test didn't.</p></div></li>
+      <li><span class="n">1</span><div><h3>Check the evening signal</h3><p>After each close the agent lists stocks that just joined the top 30. With alerts on, you get them that evening; most days there are none or a few.</p></div></li>
+      <li><span class="n">2</span><div><h3>Buy at the open, set the stop</h3><p>Buy next morning in equal amounts and place a stop-loss 10% below your price. Expect about 14 trades a month and 8 to 10 open at once, so size each so a stop costs about 1% of your money.</p></div></li>
+      <li><span class="n">3</span><div><h3>Sell after a month</h3><p>Sell at the open on the "sell by" date, about 21 trading days after buying, unless the stop hit first. Don't move the stop or sell early; the test didn't.</p></div></li>
     </ol>
   </section>
 
@@ -325,7 +329,7 @@ try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'
 catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
 
 const opt=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
-const [AUTO,SBT,HIST,TBT,MBT]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json'),opt('trades_bt.json'),opt('mom_bt.json')]);
+const [AUTO,SBT,HIST,TBT,MBT,DBT]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json'),opt('trades_bt.json'),opt('mom_bt.json'),opt('daily_bt.json')]);
 const TR={breakout:{name:'Breakout',long:'Broke to a 50-day high on 1.5 times normal volume',bt:'Breakout: 50-day high on 1.5x volume',order:0},
   momtrend:{name:'Momentum + trend turn',long:'A top-30 momentum stock closed back above its 50-day average',bt:'Momentum top 30 + trend turn above 50-day',order:1},
   new30:{name:'New momentum leader',long:'Just entered the top 30 for 12-month momentum',bt:'Momentum top 30 (newly entered)',order:2}};
@@ -474,7 +478,7 @@ function renderPicks(){
       <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')+
     (P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');
 }
-for(const id of ['#picks','#trades']){$(id).addEventListener('click',e=>{const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
+for(const id of ['#picks','#trades','#signals']){$(id).addEventListener('click',e=>{const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
   $(id).addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('.pick');if(li){e.preventDefault();openStock(li.dataset.sym);}}});}
 
 
@@ -507,37 +511,52 @@ const dlong=x=>x.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'n
 const dd=t=>new Date(t+'T00:00:00');
 function renderMom(){
   $('#caution').hidden=!!BT.rising;
-  const MB=(MBT.rows||{}),rule=Object.values(MB)[0],base=Object.values(MB)[3];const nr=nextReview(),today=dd(D.dates[D.dates.length-1]);
-  let bd=0;{const x=new Date(today);while(x<nr){x.setDate(x.getDate()+1);if(x.getDay()&&x.getDay()<6)bd++;}}
-  $('#rulebox').innerHTML=`<div><b>The rule</b><ol><li>On the last trading day of each month, after the close, the agent ranks the 300 most-traded stocks by their 12-month rise (skipping the last month), adjusted for how jumpy they are.</li><li>Buy the stocks that have just entered the top 30, at the next morning's open, in equal amounts.</li><li>Put a stop-loss 10% below your buy price.</li><li>Sell at the open after the next month-end review, whatever the price.</li></ol>${rule?`<p style="margin-top:8px">Tested ${new Date(MBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(MBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}, after 0.3% costs: <b>${pct(rule.avg)} a trade</b> on average, ${Math.round(rule.win)}% of trades won, ${rule.months_up} of ${rule.months} months were positive, worst trade ${rule.worst}%. Buying any of the 300 stocks the same way made ${pct(base.avg)} a trade.</p>`:''}</div>
-   <div><b>${MOM&&MOM.reviewIsToday?'Review is today':'Next review'}</b><div class="next">${dlong(nr)}</div><p>${MOM&&MOM.reviewIsToday?'Buy the new trades at tomorrow morning\'s open and sell last month\'s.':`${bd} trading days away (earlier if that day is a market holiday). Until then, hold this month's trades and keep the stops in place.`}</p>${rule?`<div class="stat"><span>Healthy market</span><b>${pct(rule.healthy)} a trade</b><span>Cautious market</span><b>${pct(rule.cautious)} a trade</b><span>Typical hold</span><b>${Math.round(rule.days)} trading days</b></div>`:''}</div>`;
-  // this month's trades
-  const T=(MOM&&MOM.trades)||[];
-  if(!T.length){$('#trades').innerHTML='<li class="empty">No trades recorded for this month yet.</li>';}
-  else{const rs=T.map(t=>{const s=BY[t.sym];if(!s||!t.buy)return null;return t.stopped?(t.exit/t.buy-1)*100:(s.close/t.buy-1)*100;}).filter(x=>x!=null);
-    const nstop=T.filter(t=>t.stopped).length;
-    $('#tradesnote').innerHTML=`Picked at the ${dlong(dd(MOM.review))} review and bought at the open on ${dlong(dd(MOM.buyDate))}. ${T.length} trades: ${T.length-nstop} open, ${nstop} stopped out. Average so far <b class="${cls(rs.reduce((a,b)=>a+b,0)/rs.length)}">${pct(rs.reduce((a,b)=>a+b,0)/rs.length)}</b>, before costs.`;
-    $('#trades').innerHTML=T.map((t,i)=>{const s=BY[t.sym];if(!s)return '';const pl=t.stopped?(t.exit/t.buy-1)*100:(s.close/t.buy-1)*100;const nz=s.news;
-      return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${esc(s.name)}, ${t.stopped?'stopped out':'open trade'}, ${pct(pl)}">
-       <div class="rk" aria-hidden="true">${i+1}</div>
-       <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
-        <p class="why">${t.stopped?`Stopped out on ${dlong(dd(t.stopped))}, sold near ₹${inr(t.exit)}.`:`Open. Now ₹${inr(s.close)}; stop at ₹${inr(t.stop)} (${pct((t.stop/s.close-1)*100)} from here). Sell at the open after the ${dlong(nr)} review.`}${nz&&nz.tone==='Negative'?` <span class="c">Watch: ${esc(nz.watch||'negative news')}</span>`:''}</p>
-        <span class="tag ${t.stopped?'out':'trade'}">${t.stopped?'Stopped out':'Open trade'}</span></div>
-       <div class="fs tplan"><span><small>Bought at</small><b>₹${inr(t.buy)}</b></span><span><small>Stop −10%</small><b class="down">₹${inr(t.stop)}</b></span><span><small>${t.stopped?'Sold at':'Now'}</small><b>₹${inr(t.stopped?t.exit:s.close)}</b></span><span><small>Rank at review</small><b>${t.rankAtReview} of 300</b></span></div>
-       <div class="score"><b class="${cls(pl)}" style="font-size:28px">${pct(pl)}</b><span class="muted" style="font-weight:500">${t.stopped?'closed':'so far'}</span></div>
-       <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('');}
+  const rows=DBT.rows||[],rule=rows[0],base=rows.find(r=>r.label.includes('random stocks from the 300')),t10=rows.find(r=>r.label.includes('top 10 of 300'));
+  const T=(MOM&&MOM.trades)||[],today=D.dates[D.dates.length-1];
+  const sigs=T.filter(t=>t.status==='new'),open=T.filter(t=>t.status==='open').sort((a,b)=>a.sellBy.localeCompare(b.sellBy)),closed=T.filter(t=>t.status==='closed'||t.status==='stopped').sort((a,b)=>b.exitDate.localeCompare(a.exitDate));
+  $('#rulebox').innerHTML=`<div><b>The rule</b><ol><li>Every evening, rank the 300 most-traded stocks by their 12-month rise (skipping the last month), adjusted for how jumpy they are.</li><li>When a stock enters the top 30, and was not in it during the previous 20 trading days, buy it at the next morning's open.</li><li>Put a stop-loss 10% below your buy price.</li><li>Sell at the open 21 trading days (about a month) after buying, whatever the price.</li></ol>${rule?`<p style="margin-top:8px">Tested Sept 2022 to Nov 2026, after 0.3% costs: <b>${pct(rule.avg)} a trade</b>, ${Math.round(rule.win)}% won, about ${Math.round(rule.per_month)} trades a month, worst trade ${rule.worst}%. Buying random stocks from the same 300 the same way made ${pct(base?base.avg:null)} a trade.${t10?` Stocks that jumped straight into the top 10 did best (${pct(t10.avg)} a trade), but there were only ${t10.n} of them, too few to rely on.`:''}</p>`:''}</div>
+   <div><b>Today</b><div class="next">${sigs.length} new ${sigs.length===1?'signal':'signals'}</div><p>${open.length} open trades${open.filter(t=>t.sellTomorrow).length?`, ${open.filter(t=>t.sellTomorrow).length} to sell at tomorrow's open`:''}. Checked every trading evening after the close.</p>${rule?`<div class="stat"><span>Healthy market</span><b>${pct(rule.healthy)} a trade</b><span>Cautious market</span><b>${pct(rule.cautious)} a trade</b><span>Typical hold</span><b>${Math.round(rule.days)} trading days</b></div>`:''}</div>`;
+  const nm=s=>esc(s.name.replace(/ Limited$| Ltd\.?$/i,''));
+  const strong=t=>t.rank<=10?' <span class="tag new">Strongest: entered the top 10</span>':'';
+  // new signals
+  $('#sigh').textContent=sigs.length?`New ${sigs.length===1?'signal':'signals'}: buy at tomorrow's open`:'New signals';
+  $('#signote').textContent=sigs.length?`Entered the top 30 at today's close. Stop about 10% below your buy price; sell by ${sigs[0]?dlong(dd(sigs[0].sellBy)):''}.`:'None today. New signals appear here after each close.';
+  $('#signals').innerHTML=sigs.map((t,i)=>{const s=BY[t.sym];if(!s)return '';return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}">
+     <div class="rk" aria-hidden="true">${i+1}</div>
+     <div><div class="nm">${nm(s)}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div><p class="why">Entered the top 30 today at rank ${t.rank}.${s.news&&s.news.tone==='Negative'?` <span class="c">Watch: ${esc(s.news.watch||'negative news')}</span>`:''}${firstCon(s)?` <span class="c">Watch: ${esc(firstCon(s).charAt(0).toLowerCase()+firstCon(s).slice(1))}</span>`:''}</p><span class="tag trade">Buy at tomorrow's open</span>${strong(t)}</div>
+     <div class="fs tplan"><span><small>Last close</small><b>₹${inr(s.close)}</b></span><span><small>Stop about</small><b class="down">₹${inr(s.close*0.9)}</b></span><span><small>Sell by</small><b>${dlong(dd(t.sellBy))}</b></span><span><small>Rank</small><b>${t.rank} of 300</b></span></div>
+     <div class="score"><b>${t.rank}</b><span class="muted" style="font-weight:500">rank today</span></div>
+     <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')||'';
+  // open trades
+  const pl=t=>{const s=BY[t.sym];return s&&t.buy?(s.close/t.buy-1)*100:null;};
+  const ors=open.map(pl).filter(x=>x!=null);
+  $('#tradesnote').innerHTML=open.length?`${open.length} trades bought in the last month. Average so far <b class="${cls(ors.reduce((a,b)=>a+b,0)/ors.length)}">${pct(ors.reduce((a,b)=>a+b,0)/ors.length)}</b>, before costs.`:'No open trades.';
+  $('#trades').innerHTML=open.map((t,i)=>{const s=BY[t.sym];if(!s)return '';const p=pl(t);return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}">
+     <div class="rk" aria-hidden="true">${i+1}</div>
+     <div><div class="nm">${nm(s)}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
+      <p class="why">${t.sellTomorrow?'<b>Sell at tomorrow\'s open</b>: its month is up.':`Hold until ${dlong(dd(t.sellBy))} unless the stop is hit. Stop is ${pct((t.stop/s.close-1)*100)} from today's price.`}${s.news&&s.news.tone==='Negative'?` <span class="c">Watch: ${esc(s.news.watch||'negative news')}</span>`:''}</p>
+      <span class="tag ${t.sellTomorrow?'out':'trade'}">${t.sellTomorrow?'Sell tomorrow':'Open trade'}</span>${strong(t)}</div>
+     <div class="fs tplan"><span><small>Bought ${fmtDayS(t.buyDate)}</small><b>₹${inr(t.buy)}</b></span><span><small>Stop −10%</small><b class="down">₹${inr(t.stop)}</b></span><span><small>Now</small><b>₹${inr(s.close)}</b></span><span><small>Sell by</small><b>${fmtDayS(t.sellBy)}</b></span></div>
+     <div class="score"><b class="${cls(p)}" style="font-size:28px">${pct(p)}</b><span class="muted" style="font-weight:500">so far</span></div>
+     <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')||'<li class="empty">No open trades.</li>';
+  // closed
+  const crs=closed.map(t=>(t.exit/t.buy-1)*100);
+  $('#closedsum').textContent=`Closed in the last ${D.dates.length>70?'3':''} months: ${closed.length} trades, average ${crs.length?pct(crs.reduce((a,b)=>a+b,0)/crs.length):'–'}, ${crs.filter(x=>x>0).length} winners, ${closed.filter(t=>t.status==='stopped').length} stopped out (before costs)`;
+  $('#closed').innerHTML=`<thead><tr><th>Stock</th><th>Bought</th><th>Price</th><th>Sold</th><th>Price</th><th>Result</th><th>How</th></tr></thead><tbody>${closed.map(t=>`<tr><td>${esc(t.sym)}</td><td>${fmtDayS(t.buyDate)}</td><td>₹${inr(t.buy)}</td><td>${fmtDayS(t.exitDate)}</td><td>₹${inr(t.exit)}</td><td><b class="${cls(t.exit-t.buy)}">${pct((t.exit/t.buy-1)*100)}</b></td><td>${t.status==='stopped'?'Stop-loss':'After a month'}</td></tr>`).join('')}</tbody>`;
   // top 30 now
-  const top=(MOM?MOM.top30Now:[]).map(x=>BY[x]).filter(Boolean),atRev=new Set(MOM?MOM.top30AtReview:[]),inT=new Set(T.map(t=>t.sym));
+  const top=(MOM?MOM.top30Now:[]).map(x=>BY[x]).filter(Boolean),openS=new Set(open.map(t=>t.sym)),sigS=new Set(sigs.map(t=>t.sym));
   $('#picks').innerHTML=top.map((s,i)=>{const p=pros(s).filter(x=>!x.startsWith('In the tested')).slice(0,2),c=firstCon(s);
-    const tag=inT.has(s.sym)?'<span class="tag trade">In this month\'s trades</span>':!atRev.has(s.sym)?'<span class="tag new">New since the review: buy at the next review if still here</span>':'<span class="tag">In the top 30 since before the review</span>';
+    const tag=sigS.has(s.sym)?'<span class="tag trade">New signal today</span>':openS.has(s.sym)?'<span class="tag trade">In an open trade</span>':'';
     return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${i+1}. ${esc(s.name)}">
       <div class="rk" aria-hidden="true">${i+1}</div>
-      <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
+      <div><div class="nm">${nm(s)}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
         <p class="why">${esc(p.join('. '))}${c?`. <span class="c">Watch: ${esc(c.charAt(0).toLowerCase()+c.slice(1))}</span>`:''}</p>${tag}</div>
       <div class="fs"><div class="stripcap" style="margin:0"><span>12-month rise ${s.m121==null?'–':pct(s.m121,0)}</span><span>Volatility ${s.vol==null?'–':Math.round(s.vol)+'% a year'}</span></div><div class="strip" style="margin-top:6px"><i style="width:${s.fMom}%;background:var(--f1)"></i></div></div>
       <div class="score"><b>${Math.round(s.fMom)}</b><span class="muted" style="font-weight:500">momentum score</span></div>
       <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')||'<li class="empty">No data.</li>';
 }
+const fmtDayS=d=>dd(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+
 
 // ---------- drawer ----------
 const dlg=$('#drawer');
@@ -631,10 +650,10 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
 // ---------- evidence ----------
 (function(){const sx=EV.setups||[],se=EV.seas||{},m=(BT.main||[])[0]||{},b=(BT.main||[])[2]||{};const best=sx.slice().sort((a,b)=>(b.avg||0)-(a.avg||0));
   const SS=SBT.styles||{},m30=SS['Momentum 30 (the tested model)']||{cagr:m.cagr,dd:m.dd},bk=SS['Basket: 300 most-traded']||{cagr:b.cagr},bal=SS['Balanced']||{},per=SBT.start?`${new Date(SBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(SBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}`:'the test period';
-  const MR_=(MBT.rows||{}),rl=Object.values(MR_)[0]||{},nst=Object.values(MR_)[1]||{},a30=Object.values(MR_)[2]||{},bs=Object.values(MR_)[3]||{};
+  const DR=DBT.rows||[],rl=DR[0]||{},nofresh=DR[1]||{},exo=DR[2]||{},u500=DR.find(r=>r.label.startsWith('Universe 500'))||{},bs=DR.find(r=>r.label.includes('random stocks from the 300'))||{};
   const items=[
    ['Momentum','var(--f1)','g-strong','Strong evidence',`Holding the 30 strongest stocks returned ${m30.cagr}% a year from ${per}, against ${bk.cagr}% for the 300 most-traded stocks. Blends with trend, seasonality, chart setups or company scores did worse.`],
-   ['This trade rule','var(--f1)','g-strong','Tested',`Buying only the new entries and selling a month later made ${pct(rl.avg)} a trade, against ${pct(a30.avg)} for buying all 30 and ${pct(bs.avg)} for any of the 300. Without the stop it made ${pct(nst.avg)}, but the worst trade lost ${Math.abs(nst.worst||0)}% instead of ${Math.abs(rl.worst||0)}%.`],
+   ['This trade rule','var(--f1)','g-strong','Tested',`Buying fresh entries into the top 30 and selling a month later made ${pct(rl.avg)} a trade, against ${pct(bs.avg)} for random stocks. Counting stocks that bounce in and out made ${pct(nofresh.avg)}; selling as soon as a stock leaves the top 30 made ${pct(exo.avg)}. Using the 500 most-traded instead of 300 made ${pct(u500.avg)}.`],
    ['Market mood','var(--ink2)','g-some','Some evidence',`The rule made ${pct(rl.healthy)} a trade when more stocks were joining uptrends and ${pct(rl.cautious)} when fewer were. It still made money in cautious markets, so the mood sets your position size, not whether you trade.`],
    ['What was dropped','var(--muted)','g-none','Tested or untestable',`Trend filters, seasonality, swing setups, target/stop exits, trailing stops and a valuation penalty were each tested and did not improve results; company results and news cannot be tested here. They stay on each stock's page as information.`]];
   $('#ev').innerHTML=items.map(([t,c,g,gl,p])=>`<div><h3><i class="sw" style="background:${c}"></i>${t}<span class="grade ${g}">${gl}</span></h3><p>${esc(p)}</p></div>`).join('');
@@ -642,7 +661,7 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
   $('#btnote').textContent=`Monthly portfolio simulation, ${pd(BT.start)} to ${pd(BT.end)}, on every stock that met the liquidity rule at the time. Log scale.`;
   const sg=x=>`<span class="${cls(x)}">${pct(x)}</span>`,yrs=[2022,2023,2024,2025,2026];
   const tb=(id,cap,rows)=>{$(id).innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">${cap}</caption><thead><tr><th>Strategy</th><th>Yearly return</th><th>Worst fall</th>${yrs.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(r=>`<tr><td>${esc(r.label)}</td><td><b>${sg(r.cagr)}</b></td><td>${r.dd.toFixed(1)}%</td>${(r.years||[]).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';};
-  if(MBT.rows){const rows=Object.entries(MBT.rows);$('#bt0').innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">The monthly trade rule and its alternatives, ${new Date(MBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(MBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}, average per trade after 0.3% costs</caption><thead><tr><th>Rule</th><th>Per trade</th><th>Won</th><th>Worst trade</th><th>Healthy / cautious market</th>${Object.keys(rows[0][1].years).map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td><b>${sg(v.avg)}</b></td><td>${Math.round(v.win)}%</td><td>${v.worst}%</td><td>${sg(v.healthy)} / ${sg(v.cautious)}</td>${Object.values(v.years).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';}
+  if(DBT.rows){const rows=DBT.rows;$('#bt0').innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">The daily rule and the alternatives tested, Sept 2022 to Nov 2026, average per trade after 0.3% costs</caption><thead><tr><th>Rule</th><th>Per trade</th><th>Trades a month</th><th>Won</th><th>Worst</th><th>Healthy / cautious market</th>${Object.keys(rows[0].years).map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(v=>`<tr><td>${esc(v.label.trim())}</td><td><b>${sg(v.avg)}</b></td><td>${v.per_month}</td><td>${Math.round(v.win)}%</td><td>${v.worst}%</td><td>${sg(v.healthy)} / ${sg(v.cautious)}</td>${Object.values(v.years).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';}
   tb('#bt1','The original Momentum 30 study, Dec 2021 to Nov 2026, against plain baskets',BT.main||[]);tb('#bt2','Does it survive changes to the settings?',BT.robust||[]);tb('#bt3','Rules that failed the same test',BT.failed||[]);
   const c=BT.curves;if(!c)return;const N=c.dates.length,EW=1000,EH=280,mm={l:6,r:70,t:10,b:22},ser=[['m30','var(--f1)','Momentum 30'],['m30g','var(--f2)','In cash while breadth falls'],['b300','var(--f3)','Basket']];
   const mx=Math.max(...c.m30,...c.m30g,...c.b300),mn=Math.min(...c.m30,...c.m30g,...c.b300),EX=i=>mm.l+i*(EW-mm.l-mm.r)/(N-1),EY=v=>mm.t+(Math.log(mx*1.05)-Math.log(v))*(EH-mm.t-mm.b)/(Math.log(mx*1.05)-Math.log(mn*.95));
@@ -655,12 +674,12 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
   es.addEventListener('pointerleave',()=>{et.style.display='none';ex.setAttribute('visibility','hidden');});
 })();
 
-// ---------- live track record (monthly trades) ----------
-(function(){const M_=HIST.months||{},ks=Object.keys(M_).sort().reverse();
-  const rows=ks.map(k=>{const m=M_[k],tr=m.trades||[],done=!!m.closed;const rs=tr.map(t=>t.ret!=null?t.ret:(BY[t.sym]&&t.buy?((t.stopped?t.exit:BY[t.sym].close)/t.buy-1)*100:null)).filter(x=>x!=null);
-    const av=rs.length?rs.reduce((a,b)=>a+b,0)/rs.length:null;return `<tr><td>${dlong(dd(k))}</td><td>${tr.length}</td><td>${av==null?'–':`<b class="${cls(av)}">${pct(av)}</b>`}</td><td>${rs.filter(x=>x>0).length} of ${rs.length}</td><td>${tr.filter(t=>t.stopped).length}</td><td>${done?'Closed':'Open'}</td></tr>`;}).join('');
-  $('#track').innerHTML=`<h3>Live track record</h3><p class="muted" style="font-size:13px;margin-top:4px">Each month's trades as the rule picked them, recorded by the nightly job. Returns are from the opening buy price to the stop or the review-day close, before costs.</p>`+
-   (rows?`<div style="overflow-x:auto"><table class="bt"><thead><tr><th>Review</th><th>Trades</th><th>Average</th><th>Winners</th><th>Stopped out</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="ink2" style="font-size:14px;margin-top:10px">Starts with the next nightly run.</p>');
+// ---------- live track record ----------
+(function(){const L=Object.values(HIST.trades||{}).filter(t=>t.status==='closed'||t.status==='stopped');
+  const g={};L.forEach(t=>{const k=t.exitDate.slice(0,7);(g[k]=g[k]||[]).push((t.exit/t.buy-1)*100);});
+  const ks=Object.keys(g).sort().reverse(),since=HIST.since;
+  $('#track').innerHTML=`<h3>Live track record</h3><p class="muted" style="font-size:13px;margin-top:4px">Every trade the rule makes from ${since?dlong(dd(since)):'launch'} on, recorded by the nightly job, grouped by the month it was sold. Before costs. Trades before launch are shown above under Closed trades.</p>`+
+   (ks.length?`<div style="overflow-x:auto"><table class="bt"><thead><tr><th>Sold in</th><th>Trades</th><th>Average</th><th>Winners</th></tr></thead><tbody>${ks.map(k=>{const r=g[k],a=r.reduce((x,y)=>x+y,0)/r.length;return `<tr><td>${dd(k+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</td><td>${r.length}</td><td><b class="${cls(a)}">${pct(a)}</b></td><td>${r.filter(x=>x>0).length} of ${r.length}</td></tr>`;}).join('')}</tbody></table></div>`:'<p class="ink2" style="font-size:14px;margin-top:10px">The first trades close about a month after launch.</p>');
 })();
 
 renderAll();

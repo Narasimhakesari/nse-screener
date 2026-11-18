@@ -1,15 +1,15 @@
-# NSE Stock Agent: monthly momentum trades
+# NSE Stock Agent: momentum trades
 
 A static website that runs one tested rule on NSE stocks and updates itself every weekday night.
 
-**The rule.** On the last trading day of each month, rank the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by their 12-month return skipping the last month, divided by volatility. Buy the stocks that have just entered the top 30 at the next day's open, in equal amounts, with a stop-loss 10% below the buy price. Sell at the open after the next month-end review.
+**The rule.** Every evening, rank the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by their 12-month return skipping the last month, divided by volatility. When a stock enters the top 30 and was not in it during the previous 20 trading days, buy it at the next day's open, with a stop-loss 10% below the buy price. Sell at the open 21 trading days later.
 
-**The test** (`build/backtest_momentum.py`, re-run nightly into `mom_bt.json`): from Sep 2022 to Oct 2026, after 0.3% costs, about +2.1% a trade, 50% of trades won, 30 of 49 months positive, worst trade about −21% (gaps through the stop are filled at the open). Buying all 30 made about +1.1% a trade and buying any of the 300 about +0.6%. Without the stop: +2.6% a trade but a worst trade of −40%. The rule made about +3.3% a trade when market breadth was rising and +1.1% when it was falling, so the page shows market mood as a position-size warning.
+**The test** (`build/backtest_daily_momentum.py`, re-run nightly into `daily_bt.json`): from Sep 2022 to Nov 2026, after 0.3% costs, about +1.7% a trade, 48% won, about 14 trades a month, worst trade about −21% (gaps through the stop are filled at the open). Random stocks from the same 300 with the same exits made about +0.7%. Without the 20-day freshness rule: +1.1% and 45 trades a month. Selling when a stock leaves the top 30: about +0.2%. The 500 most-traded instead of 300: about the same per trade. Stocks entering straight into the top 10 made about +4% a trade but were too few (33) to rely on. The rule made about +2.5% a trade when market breadth was rising and +0.9% when falling, so the page shows market mood as a position-size warning. A once-a-month version (`build/backtest_momentum.py`) made about +2.1% a trade.
 
 **Tested and dropped:** blends with trend, seasonality and chart setups (`build/backtest_styles.py`); a 200-day-average filter; target/stop swing exits and short holds (`build/backtest_trades.py`); trailing stops; a valuation penalty. Company results and news cannot be backtested here; they appear on each stock's page as information.
 
 ## Alerts (optional)
-`build/notify.py` keeps the record of each month's trades in `history.json` (shown on the page as a live track record) and sends a message only when there is something to do: the month-end review (what to sell and buy at the next open), a stop-loss hit, a change in market mood, and a Friday summary of open trades. Add repository secrets (Settings → Secrets and variables → Actions):
+`build/notify.py` records every trade from launch in `history.json` (the page's live track record) and sends one evening message only when there is something to do: new buys for tomorrow's open, trades to sell at tomorrow's open, stop-losses hit, a change in market mood, and a Friday list of open trades. Add repository secrets (Settings → Secrets and variables → Actions):
 - Telegram: `TELEGRAM_BOT_TOKEN` (create a bot with @BotFather) and `TELEGRAM_CHAT_ID` (send your bot a message, then open `https://api.telegram.org/bot<token>/getUpdates` and copy `chat.id`).
 - Or the free ntfy app: `NTFY_TOPIC`, any long private name you also subscribe to in the app.
 

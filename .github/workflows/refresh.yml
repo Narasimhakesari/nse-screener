@@ -10,7 +10,7 @@ on:
       - 'build/notify.py'
       - 'build/build.py'
       - 'build/backtest_styles.py'
-      - 'build/backtest_momentum.py'
+      - 'build/backtest_daily_momentum.py'
       - '.github/workflows/refresh.yml'
 permissions:
   contents: write
@@ -49,14 +49,14 @@ jobs:
         continue-on-error: true
         run: |
           python build/backtest_styles.py wd && cp wd/styles_bt.json styles_bt.json
-          python build/backtest_momentum.py wd > /dev/null && cp wd/mom_bt.json mom_bt.json
+          python build/backtest_daily_momentum.py wd > /dev/null && cp wd/daily_bt.json daily_bt.json
       - name: Fetch news headlines and company numbers for the top-ranked stocks
         continue-on-error: true
         timeout-minutes: 35
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # optional: add this secret to have Claude write the summaries
         run: python build/news_fund.py
-      - name: Record this month's trades and send alerts
+      - name: Record trades and send alerts
         continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -69,7 +69,7 @@ jobs:
           git config user.name "screener-bot"
           git config user.email "screener-bot@users.noreply.github.com"
           git add data.json
-          for f in auto.json styles_bt.json mom_bt.json history.json; do [ -f "$f" ] && git add "$f"; done
+          for f in auto.json styles_bt.json daily_bt.json history.json; do [ -f "$f" ] && git add "$f"; done
           git diff --cached --quiet || git commit -m "Refresh data"
           git pull --rebase origin main
           git push
