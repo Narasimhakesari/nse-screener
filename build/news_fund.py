@@ -7,8 +7,8 @@ Reads data.json and static.json, writes auto.json:
   sc:   company numbers from Screener.in public pages (quarterly profit and sales vs a year earlier, P/E, ROE,
         ROCE, market cap, promoter/FII/DII holdings, latest exchange announcements); Yahoo Finance fills gaps
 Anything that fails to download keeps its previous value (up to 60 days old). Never fails the build.
-With GITHUB_TOKEN set (GitHub Actions, permission models: read), an AI model on GitHub Models reads the collected
-results, exchange announcements and headlines for each stock and writes a short summary, tone and main risk.
+Each stock's news is then read from the facts: reported results, the company's own exchange announcements, shareholding
+changes, and (weakly) headlines. If an ANTHROPIC_API_KEY secret is set, Claude reads the same facts instead.
 Needs network access to news.google.com and Yahoo Finance; yfinance is optional.
 """
 import json, os, re, sys, time, datetime as dt, urllib.request, urllib.parse
@@ -93,7 +93,8 @@ def news_for(s):
 
 # ---------- company numbers: Screener.in (public company pages, no login) ----------
 def _txt(h):
-    h = re.sub(r'<[^>]+>', ' ', h).replace('&nbsp;', ' ').replace('&amp;', '&')
+    import html as _h
+    h = _h.unescape(re.sub(r'<[^>]+>', ' ', h))
     return re.sub(r'\s+', ' ', h).strip(' +')
 
 def _num(t):
@@ -194,79 +195,122 @@ def fund_for(sym):
                 out.update(q=c0.strftime('%b %Y'), np=cr(vals[0]), npYoY=cr(vals[1]), sales=cr(vals[2]), salesYoY=cr(vals[3]))
     return {k: v for k, v in out.items() if v is not None}
 
-# ---------- AI reading (GitHub Models, free with the workflow's GITHUB_TOKEN) ----------
-MODELS = ['openai/gpt-4.1-mini', 'openai/gpt-4o-mini', 'openai/gpt-4.1', 'openai/gpt-4o']
+# ---------- reading the news: facts first ----------
+ROUTINE = re.compile(r"newspaper|trading window|investor meet|analyst\s*/?\s*investor|analysts? meet|con(ference)? call|earnings call|transcript|audio recording|"
+                     r"certificate under|regulation 74|loss of share|duplicate share|book closure|record date|compliance certificate|"
+                     r"intimation of (board )?meeting|board meeting intimation|change in (rta|registrar)|esop|esos|allotment of .*options|"
+                     r"postal ballot|scrutinizer|voting results|closure of|presentation|sustainability|brsr|interest rates? update|"
+                     r"appoint\w* .{0,40}(assistant|associate|senior manager|manager|\bvp\b|vice president|company secretary)|"
+                     r"superannuat|retire(s|d|ment)\b|credit rating.{0,40}reaffirm|reaffirm|press release.{0,20}results|disclosure under regulation 30.{0,20}$", re.I)
+POSF = re.compile(r"\border\b|orders worth|contract|award|letter of (intent|acceptance)|acqui|buy-?back|bonus|stock split|sub-?division|"
+                  r"dividend|upgrade|approval|approves|commission(ed|ing)|capacity|expansion|launch|partnership|joint venture|wins?\b|bags?\b", re.I)
+NEGF = re.compile(r"penalt|fine[ds]?\b|show cause|sebi order|adjudicat|resign|auditor|default|fraud|search|raid|downgrade|pledge|invocation|"
+                  r"litigation|tax demand|demand order|strike|fire\b|shutdown|recall|warning letter|import alert|form 483|observations|"
+                  r"insolvency|nclt|suspension|qualified opinion|reduc(ed|tion) in (stake|holding)", re.I)
+
+def _clean_detail(d):
+    import html as _h
+    d = _h.unescape(d or '')
+    return re.sub(r'^\s*\d{1,2}\s+[A-Za-z]{3}\s*-\s*', '', d or '').strip()
+
+def read_facts(stock, n, f):
+    """Deterministic reading of the collected facts. Returns tone, 2-3 sentence summary, main risk."""
+    score, pos, neg, parts = 0, [], [], []
+    np_, npy, sl, sly = f.get('np'), f.get('npYoY'), f.get('sales'), f.get('salesYoY')
+    if np_ is not None and npy is not None:
+        q = f.get('q', 'latest quarter')
+        if npy > 0 and np_ > 0:
+            g = (np_ / npy - 1) * 100
+            txt = f"In the {q} quarter, profit was Rs {np_:,.0f} crore, {'up' if g >= 0 else 'down'} {abs(g):.0f}% on a year earlier"
+            score += 2 if g > 15 else 1 if g > 0 else -2 if g < -15 else -1
+            (pos if g > 0 else neg).append(f"profit {'up' if g >= 0 else 'down'} {abs(g):.0f}%")
+        elif npy <= 0 < np_:
+            txt = f"In the {q} quarter, it made a profit of Rs {np_:,.0f} crore against a loss a year earlier"; score += 2; pos.append('back to profit')
+        elif np_ <= 0:
+            txt = f"In the {q} quarter, it made a loss of Rs {abs(np_):,.0f} crore"; score -= 2; neg.append('quarterly loss')
+        else:
+            txt = ''
+        if txt and sl and sly and sly > 0:
+            sg = (sl / sly - 1) * 100
+            txt += f", on sales {'up' if sg >= 0 else 'down'} {abs(sg):.0f}%"
+            score += 1 if sg > 10 else -1 if sg < 0 else 0
+        if txt: parts.append(txt + '.')
+    own = []
+    p_, fi = f.get('prom'), f.get('fii')
+    if isinstance(p_, list) and abs(p_[1] - p_[0]) >= 0.5:
+        own.append(f"promoters {'raised' if p_[1] > p_[0] else 'cut'} their stake from {p_[0]}% to {p_[1]}%")
+        if p_[1] < p_[0]: score -= 1; neg.append(f'promoters cut their stake to {p_[1]}%')
+        else: score += 1
+    if isinstance(fi, list) and abs(fi[1] - fi[0]) >= 1:
+        own.append(f"foreign investors {'raised' if fi[1] > fi[0] else 'cut'} {'theirs' if own else 'their stake'} from {fi[0]}% to {fi[1]}%")
+        if fi[1] > fi[0]: score += 1
+        else: score -= 1; neg.append(f'foreign investors cut their stake from {fi[0]}% to {fi[1]}%')
+    if own: parts.append((own[0][0].upper() + own[0][1:] + (', and ' + own[1] if len(own) > 1 else '')) + ' last quarter.')
+    key = []
+    for x in (f.get('filings') or []):
+        import html as _h
+        t, d = _h.unescape(x.get('t', '')), _clean_detail(x.get('d', ''))
+        blob = f'{t} {d}'
+        if (ROUTINE.search(t) or ROUTINE.search(d)) and not NEGF.search(blob): continue
+        if re.search(r'financial results|results for the quarter', blob, re.I) and np_ is not None: continue
+        isneg, ispos = bool(NEGF.search(blob)), bool(POSF.search(blob))
+        if re.search(r'set aside|quash|dropp(ed|ing)|favou?rable|in (its|our) favou?r|withdrawn|succeed|dismiss(ed|al) of the (demand|notice)|no (material )?impact|not material', blob, re.I):
+            isneg, ispos = False, True
+        if re.search(r'promoter', blob, re.I) and re.search(r'\bsale|sold|sell', blob, re.I): isneg, ispos = True, False
+        if isneg: score -= 2; neg.append(d or t)
+        elif ispos: score += 1; pos.append(d or t)
+        key.append(d or t)
+        if len(key) >= 2: break
+    if key: parts.append('Latest filing: ' + key[0].rstrip('.') + '.' + (' Also: ' + key[1].rstrip('.') + '.' if len(key) > 1 else ''))
+    if np_ is None and not key:   # headlines only count when there is nothing firmer
+        ht = tone(n.get('items') or [])
+        if ht == 'Positive': score += 1
+        elif ht == 'Negative': score -= 1
+    if not parts:
+        items = n.get('items') or []
+        if items: parts.append(f"No new results or significant filings on record. Latest headline: {items[0]['t']} ({items[0].get('src','')}, {items[0].get('date','')}).")
+        else: parts.append('No new results, significant filings or company-specific headlines in the last 30 days.')
+    strong_neg = any(NEGF.search(x) for x in neg)
+    tone_ = 'Positive' if score >= 2 and not strong_neg else 'Negative' if score <= -2 else 'Mixed' if (pos and neg) else 'Neutral'
+    watch = neg[0] if neg else ''
+    watch = watch[0].upper() + watch[1:] if watch else ''
+    return dict(tone=tone_, summary=' '.join(parts[:3]), watch=watch)
+
+# Optional: a real AI model reads the same facts if an Anthropic API key is set as the ANTHROPIC_API_KEY secret.
 SYSTEM = (
- "You are a careful equity research assistant for Indian (NSE) stocks. You are given facts collected today: "
- "the latest quarterly results, the company's own stock-exchange announcements (with one-line summaries), shareholding changes, "
- "and recent news headlines with dates and sources. Using ONLY these facts, judge what the recent news means for a shareholder. "
- "Rules: never invent numbers, events or dates; prefer exchange announcements and reported results over headlines; ignore "
- "generic market-wrap or 'stocks to watch' headlines that say nothing specific about the company; ignore routine filings "
- "(newspaper publications, trading-window closures, investor-meet intimations) unless they contain news. "
- "Reply with JSON only: {\"tone\": \"Positive\"|\"Mixed\"|\"Negative\"|\"Neutral\", "
- "\"summary\": \"2-3 plain-English sentences with the key facts and numbers\", "
- "\"watch\": \"one short risk a shareholder should know, or empty string\"}. "
- "Use Neutral when there is no meaningful company-specific news.")
+ "You are a careful equity research assistant for Indian (NSE) stocks. You are given facts collected today: the latest quarterly "
+ "results, the company's own stock-exchange announcements (with one-line summaries), shareholding changes and recent headlines. "
+ "Using ONLY these facts, say what the recent news means for a shareholder. Never invent numbers, events or dates; prefer "
+ "announcements and reported results over headlines; ignore generic market-wrap headlines and routine filings. Reply with JSON only: "
+ "{\"tone\": \"Positive\"|\"Mixed\"|\"Negative\"|\"Neutral\", \"summary\": \"2-3 plain-English sentences with the key facts and numbers\", "
+ "\"watch\": \"one short risk a shareholder should know, or empty string\"}.")
 
 def facts_for(stock, n, f):
     lines = [f"Company: {stock['name']} (NSE: {stock['sym']}), sector {stock['sector']}. Today: {NOW.strftime('%d %b %Y')}."]
     if f.get('np') is not None and f.get('npYoY') is not None:
-        r = f"Results for quarter ending {f.get('q','?')} ({f.get('src','')}): net profit Rs {f['np']} cr vs Rs {f['npYoY']} cr a year earlier"
+        r = f"Results for quarter ending {f.get('q','?')}: net profit Rs {f['np']} cr vs Rs {f['npYoY']} cr a year earlier"
         if f.get('sales') is not None and f.get('salesYoY') is not None: r += f"; sales Rs {f['sales']} cr vs Rs {f['salesYoY']} cr"
         lines.append(r + '.')
     for k, lab in (('prom', 'Promoter'), ('fii', 'FII'), ('dii', 'DII')):
         if isinstance(f.get(k), list): lines.append(f"{lab} holding: {f[k][0]}% previous quarter -> {f[k][1]}% latest.")
-    if f.get('pe') is not None: lines.append(f"P/E {f['pe']}, ROE {f.get('roe','?')}%.")
     for x in (f.get('filings') or [])[:5]: lines.append(f"Exchange announcement: {x['t']}. {x.get('d','')}")
     for x in (n.get('items') or [])[:8]: lines.append(f"Headline ({x.get('src','')}, {x.get('date','')}): {x['t']}")
     return '\n'.join(lines)
 
 def _parse_reply(content):
-    c = (content or '').strip()
-    c = re.sub(r'^```(?:json)?\s*|\s*```$', '', c)
+    c = re.sub(r'^```(?:json)?\s*|\s*```$', '', (content or '').strip())
     m = re.search(r'\{.*\}', c, re.S)
     return json.loads(m.group(0) if m else c)
 
-def _post_models(payload, token):
-    """POST to GitHub Models the way GitHub's docs show (curl), returning (status, body bytes)."""
-    import subprocess, tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as fh:
-        json.dump(payload, fh); fn = fh.name
-    try:
-        r = subprocess.run(['curl', '-sS', '-X', 'POST', 'https://models.github.ai/inference/chat/completions',
-                            '-H', 'Content-Type: application/json', '-H', 'Accept: application/vnd.github+json',
-                            '-H', f'Authorization: Bearer {token}', '-H', 'X-GitHub-Api-Version: 2022-11-28',
-                            '--data-binary', f'@{fn}', '-w', '\n%{http_code}', '--max-time', '90'],
-                           capture_output=True, timeout=120)
-    finally:
-        os.unlink(fn)
-    out = r.stdout.rsplit(b'\n', 1)
-    code = int(out[1]) if len(out) == 2 and out[1].strip().isdigit() else 0
-    return code, out[0] if len(out) == 2 else r.stdout + r.stderr
-
-def ai_read(text, token):
-    errs = []
-    for m in list(MODELS):
-        for use_fmt in (True, False):
-            payload = dict(model=m, temperature=0.1, max_tokens=400,
-                           messages=[dict(role='system', content=SYSTEM), dict(role='user', content=text)])
-            if use_fmt: payload['response_format'] = {'type': 'json_object'}
-            code, raw = _post_models(payload, token)
-            if code == 429 or code in (401, 403):
-                errs.append(f'{m}: HTTP {code} {raw[:200]!r}'); raise RuntimeError(' | '.join(errs))
-            if code != 200:
-                errs.append(f'{m} fmt={use_fmt}: HTTP {code} {raw[:200]!r}'); continue
-            try:
-                res = json.loads(raw)
-                content = res['choices'][0]['message'].get('content')
-                out = _parse_reply(content)
-                if out.get('tone') not in ('Positive', 'Mixed', 'Negative', 'Neutral') or not out.get('summary'):
-                    raise ValueError(f'bad reply: {str(content)[:160]}')
-                if m != MODELS[0]: MODELS.remove(m); MODELS.insert(0, m)
-                return out, m
-            except Exception as e:
-                errs.append(f'{m} fmt={use_fmt}: {e} raw={raw[:160]!r}')
-    raise RuntimeError(' | '.join(errs))
+def claude_read(text, key):
+    body = json.dumps(dict(model=os.environ.get('CLAUDE_MODEL', 'claude-haiku-5-5'), max_tokens=400, temperature=0.1, system=SYSTEM,
+                           messages=[dict(role='user', content=text)])).encode()
+    req = urllib.request.Request('https://api.anthropic.com/v1/messages', data=body, method='POST',
+                                 headers={'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=60) as r: res = json.loads(r.read())
+    out = _parse_reply(''.join(b.get('text', '') for b in res.get('content', [])))
+    if out.get('tone') not in ('Positive', 'Mixed', 'Negative', 'Neutral') or not out.get('summary'): raise ValueError(f'bad reply {out}')
+    return out, res.get('model', 'claude')
 
 def main():
     D = json.load(open(os.path.join(ROOT, 'data.json')))
@@ -342,29 +386,30 @@ def main():
             f['fetched'] = NOW.strftime('%Y-%m-%d'); sc[s['sym']] = f; LOG['fund_ok'] += 1
         else:
             LOG['fund_fail'] += 1
-    token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_MODELS_TOKEN')
-    LOG['ai_ok'] = LOG['ai_kept'] = LOG['ai_fail'] = 0
-    if token:
-        import hashlib
-        for s in picks:
-            sym = s['sym']; n = news.get(sym)
-            if not n: continue
-            text = facts_for(s, n, sc.get(sym, {}))
-            h = hashlib.sha1(text.split('\n', 1)[-1].encode()).hexdigest()[:12]
-            old = (OLD.get('news') or {}).get(sym, {})
-            if old.get('ai') and old.get('ihash') == h:
-                for k in ('tone', 'text', 'watch', 'ai', 'ihash', 'model'): n[k] = old.get(k, n.get(k))
-                LOG['ai_kept'] += 1; continue
-            try:
-                out, model = ai_read(text, token)
-                n.update(tone=out['tone'], text=out['summary'].strip(), watch=(out.get('watch') or '').strip(), ai=True, ihash=h, model=model)
-                LOG['ai_ok'] += 1
-            except Exception as e:
-                LOG['ai_fail'] += 1; note(f'ai {sym}: {e}')
-                if 'HTTP 429' in str(e) or 'HTTP 401' in str(e) or 'HTTP 403' in str(e) or LOG['ai_fail'] >= 3 and LOG['ai_ok'] == 0: break
-            time.sleep(4.5)
-    else:
-        note('no GITHUB_TOKEN: AI reading skipped')
+    key = os.environ.get('ANTHROPIC_API_KEY', '').strip()
+    LOG['read_rules'] = LOG['read_ai'] = LOG['read_ai_kept'] = LOG['read_ai_fail'] = 0
+    import hashlib
+    for s in picks:
+        sym = s['sym']; n = news.get(sym)
+        if not n: continue
+        f = sc.get(sym, {})
+        r = read_facts(s, n, f)
+        n.update(tone=r['tone'], text=r['summary'], watch=r['watch'], read='rules'); n.pop('ai', None); n.pop('model', None)
+        LOG['read_rules'] += 1
+        if not key: continue
+        text = facts_for(s, n, f); h = hashlib.sha1(text.split('\n', 1)[-1].encode()).hexdigest()[:12]
+        old = (OLD.get('news') or {}).get(sym, {})
+        if old.get('read') == 'ai' and old.get('ihash') == h:
+            for k in ('tone', 'text', 'watch', 'model'): n[k] = old.get(k, n.get(k))
+            n.update(read='ai', ihash=h); LOG['read_ai_kept'] += 1; continue
+        try:
+            out, model = claude_read(text, key)
+            n.update(tone=out['tone'], text=out['summary'].strip(), watch=(out.get('watch') or '').strip(), read='ai', ihash=h, model=model)
+            LOG['read_ai'] += 1
+        except Exception as e:
+            LOG['read_ai_fail'] += 1; note(f'ai {sym}: {e}')
+            if LOG['read_ai_fail'] >= 3 and LOG['read_ai'] == 0: key = ''
+        time.sleep(1)
     LOG['finished'] = dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ')
     out = dict(asof=NOW.astimezone(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime('%d %b %Y').lstrip('0'), news=news, sc=sc, log=LOG)
     json.dump(out, open(ap, 'w'), ensure_ascii=False, separators=(',', ':'))

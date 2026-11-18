@@ -9,7 +9,6 @@ on:
       - 'build/news_fund.py'
 permissions:
   contents: write
-  models: read
 concurrency:
   group: refresh
   cancel-in-progress: false
@@ -45,7 +44,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 35
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # optional: add this secret to have Claude write the summaries
         run: python build/news_fund.py
       - name: Commit new data
         run: |
