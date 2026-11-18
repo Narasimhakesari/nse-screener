@@ -7,6 +7,7 @@ on:
     paths:
       - 'fundamentals.csv'
       - 'build/news_fund.py'
+      - 'build/notify.py'
 permissions:
   contents: write
 concurrency:
@@ -31,7 +32,7 @@ jobs:
       - name: Rebuild prices and scores
         run: |
           mkdir -p wd
-          python build/build.py wd | tee summary.txt
+          DUMP=1 python build/build.py wd | tee summary.txt
       - name: Check the result before publishing
         run: |
           python - <<'PY'
@@ -40,18 +41,29 @@ jobs:
           assert s['files']>=300 and 700<=s['stocks']<=1600 and 1<s['breadth']<99 and len(s['top5'])==5, s
           PY
           cp wd/data.json data.json
+      - name: Re-run the style backtest on the latest data
+        continue-on-error: true
+        run: python build/backtest_styles.py wd && cp wd/styles_bt.json styles_bt.json
       - name: Fetch news headlines and company numbers for the top-ranked stocks
         continue-on-error: true
         timeout-minutes: 35
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # optional: add this secret to have Claude write the summaries
         run: python build/news_fund.py
+      - name: Save today's picks and send the alert
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: python build/notify.py
       - name: Commit new data
         run: |
           git config user.name "screener-bot"
           git config user.email "screener-bot@users.noreply.github.com"
           git add data.json
-          [ -f auto.json ] && git add auto.json
+          for f in auto.json styles_bt.json history.json; do [ -f "$f" ] && git add "$f"; done
           git diff --cached --quiet || git commit -m "Refresh data"
           git pull --rebase origin main
           git push

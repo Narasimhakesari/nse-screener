@@ -13,7 +13,12 @@ Each stock gets a score out of 100 from six factors, each ranked against all oth
 | News | Tone of the latest results and announcements, from a web search of the top picks | Not testable |
 | Swing setup | Breakout, tight base or pullback in the last few days | Weak: small edge over 20 days |
 
-Visitors choose a style (Balanced, Momentum, Swing trade, Long-term) or set their own weights. Only stocks above their 200-day average are ranked as picks.
+Visitors choose a style or set their own weights. **Momentum is the default** because it did best when every style was backtested (`build/backtest_styles.py`, re-run nightly into `styles_bt.json`): from Sep 2022 to Nov 2026 the plain Momentum 30 returned about 27.6% a year against 18.6% for the 300 most-traded stocks, while every blend with the other factors returned 22–24%. Holding cash while market breadth falls cut the worst fall from about 30% to about 4%, for about 5% a year less return; the page warns when that applies. The other styles (Balanced, Swing trade, Long-term) only rank stocks above their 200-day average. P/E above 100 or 200, or a loss, cuts a score by 5 or 10 points (untested).
+
+## Alerts (optional)
+Every weekday night `build/notify.py` saves the default top 10 to `history.json` (shown on the page as a live track record) and can message you the top 10, what's new or dropped, the market mood and, after each month-end, the Momentum 30 buy and sell list. Add repository secrets (Settings → Secrets and variables → Actions):
+- Telegram: `TELEGRAM_BOT_TOKEN` (create a bot with @BotFather) and `TELEGRAM_CHAT_ID` (send your bot a message, then open `https://api.telegram.org/bot<token>/getUpdates` and copy `chat.id`).
+- Or the free ntfy app: `NTFY_TOPIC`, any long private name you also subscribe to in the app.
 
 ## Files
 - `index.html`: the page.
