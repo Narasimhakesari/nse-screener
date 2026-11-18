@@ -20,7 +20,8 @@ Visitors choose a style (Balanced, Momentum, Swing trade, Long-term) or set thei
 - `data.json`: prices, indicators, factor scores, seasonality and evidence tests. Rebuilt every weekday.
 - `static.json`: backtest report, news notes and fundamentals.
 - `build/build.py`: rebuilds `data.json` from NSE's daily files (keeps about 5 years in `wd/bhav`).
-- `.github/workflows/refresh.yml`: runs the build every weekday at 8:37 pm IST and commits the new `data.json`. The daily files are cached between runs, so only new days are downloaded.
+- `auto.json`: nightly news headlines and company numbers for the top-ranked stocks (`build/news_fund.py`).
+- `.github/workflows/refresh.yml`: runs everything every weekday at 8:37 pm IST and commits `data.json` and `auto.json`. The daily files are cached between runs, so only new days are downloaded.
 
 ## Setup
 1. Push this folder to a public GitHub repository, including the hidden `.github` folder.
@@ -35,8 +36,13 @@ Visitors choose a style (Balanced, Momentum, Swing trade, Long-term) or set thei
 
 The file needs an `NSE Code` column. Recognised columns: Market Capitalization, Price to Earning, Return on equity, Return on capital employed, Debt to equity, Sales growth 3Years, Profit growth 3Years, YOY Quarterly profit growth, YOY Quarterly sales growth, Promoter holding, Change in promoter holding, Pledged percentage, FII holding, Change in FII holding, DII holding, Change in DII holding.
 
-## Updating news (automatic)
-A weekly scheduled task runs `python3 build/agent_tasks.py todo`, researches news and the latest quarterly results for the listed stocks, merges them with `python3 build/agent_tasks.py apply notes.json` and commits `static.json`. To do it by hand:
-News notes live in `static.json` under `news`, one entry per symbol: `tone` (Positive, Mixed, Negative or Nothing found), `date`, `text`, `src` and `url`. Refresh them for the current top picks every week or two.
+## News and company numbers (automatic)
+Every weekday night, after prices are rebuilt, `build/news_fund.py` takes the top-ranked stocks (about 70) and:
+- collects their last 30 days of Google News headlines and judges the tone from the headline wording;
+- downloads the latest quarterly profit and sales against a year earlier, P/E, ROE, debt and market cap from Yahoo Finance.
+
+It writes `auto.json`, which the page merges with `static.json`: the newer news wins, and Yahoo numbers are used when they are for a newer quarter than the Screener.in upload. If a source fails, the previous values are kept for up to 60 days and the price refresh still publishes.
+
+`build/agent_tasks.py` is optional: it lets someone add hand-written news notes (`todo` lists the stocks, `apply notes.json` merges them into `static.json`).
 
 Not investment advice.

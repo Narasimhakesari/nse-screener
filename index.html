@@ -290,7 +290,7 @@ dialog.drawer[open]{animation:slide .22s ease-out}
 
   <footer class="foot">
     <p><b>Not investment advice.</b> This is a rules-based ranking from public data, not a recommendation to buy or sell. Prices are end-of-day, not live. Check the current price and the company's latest filings before you trade.</p>
-    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. Fundamentals: Screener.in and MoneyWorks4Me for the stocks that have them; others count as neutral. News: web search, checked on <span id="newsAsof"></span> for the top picks only.</p>
+    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. Company numbers: Yahoo Finance for the top-ranked stocks, fetched nightly, plus Screener.in and MoneyWorks4Me where available; others count as neutral. News: Google News headlines for the top-ranked stocks, last checked <span id="newsAsof"></span>; tone is judged from headline wording.</p>
     <p><b>Limits.</b> Small stocks move fast and can gap past a stop-loss. Seasonality uses at most five years per month. Splits and bonuses are detected from one-day price drops and adjusted; dividends are not.</p>
   </footer>
 </div>
@@ -315,13 +315,20 @@ let D,ST;
 try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json();})));}
 catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
 
+const AUTO=await fetch('auto.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
 const S=D.stocks, BT=Object.assign({},ST.bt,D.bt), EV=D.ev||{}, MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const TM=(D.tmon||12)-1, TMN=MONL[TM];
-const NEWS=ST.news||{}, BY=Object.fromEntries(S.map(s=>[s.sym,s]));
+const MI={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const dnum=t=>{const m=String(t||'').trim().match(/^(\d{1,2})?\s*([A-Za-z]{3})[a-z]*\s+(\d{4})$/);return m?(+m[3])*10000+MI[m[2].toLowerCase()]*100+(+(m[1]||1)):0;};
+const NEWS=Object.assign({},ST.news||{});for(const [k,v] of Object.entries(AUTO.news||{})){if(!NEWS[k]||dnum(v.date)>dnum(NEWS[k].date))NEWS[k]=v;}
+const BY=Object.fromEntries(S.map(s=>[s.sym,s]));
 
 // ---------- fundamentals score ----------
 const pr=(arr,v,hi)=>{if(v==null||!isFinite(v)||arr.length<5)return null;let n=0;for(const a of arr){if(hi?a<v:a>v)n++;else if(a===v)n+=.5;}return n/arr.length*100;};
-S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.sc=(D.sc||{})[s.sym]||(ST.sc||{})[s.sym]||null;s.news=NEWS[s.sym]||null;});
+S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.news=NEWS[s.sym]||null;
+  const man=(D.sc||{})[s.sym]||(ST.sc||{})[s.sym]||null,au=(AUTO.sc||{})[s.sym]||null;
+  s.scSrc=man?`Screener.in, ${(D.sc||{})[s.sym]?D.scAsof:ST.scAsof}`:'';
+  if(au&&(!man||dnum(au.q)>dnum(man.q)||man.np==null)){s.sc=Object.assign({},man||{},au);s.scSrc=`Yahoo Finance, fetched ${au.fetched||''}`+(man?' (ownership from Screener.in)':'');}else s.sc=man;});
 (function(){
   const fin=s=>s.sector==='Financial Services';
   const A=(get,filt=()=>true)=>S.map(s=>filt(s)?get(s):null).filter(v=>v!=null&&isFinite(v));
@@ -334,7 +341,7 @@ S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.sc=(D.sc||{})[s.sym]||(ST.sc||{})[s
   S.forEach(s=>{const a=s.f50?comb(s,g50,w50,arr50):null;let b=s.sc?comb(s,gsc,wsc,arrsc):null;
     if(b!=null&&s.sc){if(s.sc.pledge>10)b-=15;if(s.sc.pe==null&&s.sc.roe<0)b-=20;b=Math.max(0,b);}
     const v=[a,b].filter(x=>x!=null);s.fFund=v.length?v.reduce((x,y)=>x+y,0)/v.length:null;
-    s.fNews=s.news?({Positive:85,Mixed:45,Negative:12}[s.news.tone]??null):null;
+    s.fNews=s.news?({Positive:85,Neutral:55,Mixed:45,Negative:12}[s.news.tone]??null):null;
     s.fTrend=s.tscore;});
 })();
 
@@ -388,7 +395,7 @@ const firstCon=s=>cons(s).filter(x=>!x.startsWith('Market breadth'))[0];
 // ---------- header, mood ----------
 const built=new Date(D.built);
 $('#asof').innerHTML=`<span>Prices from NSE close, </span>${esc(D.asof)}<br><span class="muted">Updated ${built.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</span>`;
-$('#newsAsof').textContent=ST.newsAsof||ST.fundAsof||'';
+$('#newsAsof').textContent=AUTO.asof||ST.newsAsof||ST.fundAsof||'';
 (function(){const b=BT,a=b.breadth,v=b.bavg,Wd=150,H=46,all=a.concat(v.filter(x=>x!=null)),lo=Math.min(...all)-1,hi=Math.max(...all)+1;
   const X=i=>2+i*(Wd-8)/(a.length-1),Y=x=>3+(hi-x)*(H-6)/(hi-lo),P=arr=>arr.map((x,i)=>x==null?'':(i&&arr[i-1]!=null?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('');
   const calm=b.rising;
@@ -508,7 +515,7 @@ function openStock(sym){const s=BY[sym];if(!s)return;score(s);
     if(f.sales!=null)fund.push(['Sales, same quarter',`₹${inr(f.sales,0)} cr <span class="muted">vs ₹${inr(f.salesYoY,0)} cr</span>`]);
     fund.push(['Debt to equity',f.de??'–']);if(f.prom)fund.push(['Promoter holding',`${f.prom[1]}% <span class="${f.prom[1]>=f.prom[0]?'up':'down'}">${pct(f.prom[1]-f.prom[0],2)}</span>`]);if(f.fii)fund.push(['FII holding',`${f.fii[1]}% <span class="${f.fii[1]>=f.fii[0]?'up':'down'}">${pct(f.fii[1]-f.fii[0],2)}</span>`]);if(f.pledge)fund.push(['Pledged by promoters',f.pledge+'%']);}
   else if(f5){fund.push(['P/E',inr(f5.pe,1)],['P/B',inr(f5.pb,1)],['Return on equity',inr(f5.roe,1)+'%'],['5-year sales growth',inr(f5.sales5,1)+'%'],['5-year profit growth',inr(f5.profit5,1)+'%']);if(f5.evebitda)fund.push(['EV/EBITDA',inr(f5.evebitda,1)]);}
-  const fsrc=f?`Screener.in, ${esc((D.sc||{})[s.sym]?D.scAsof:ST.scAsof)}`:f5?`MoneyWorks4Me, ${esc(ST.fundAsof)}`:'';
+  const fsrc=f?esc(s.scSrc):f5?`MoneyWorks4Me, ${esc(ST.fundAsof)}`:'';
   dlg.innerHTML=`<div class="dhead"><div><h2 id="dname">${esc(s.name)}</h2><p class="meta">${esc(s.sym)}, ${esc(s.sector)}, ${esc(s.idx)}</p><p class="pxl"><b>₹${inr(s.close)}</b> <span class="${cls(s.chg)}">${pct(s.chg)}</span> <span class="muted">at close, ${esc(D.asof)}</span></p></div>
      <div class="acts"><button type="button" class="btn" id="wbtn">${WATCH.has(s.sym)?'On watchlist ✓':'Add to watchlist'}</button><button type="button" class="iconbtn" id="dclose" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div></div>
    <div class="dbody">
@@ -519,7 +526,7 @@ function openStock(sym){const s=BY[sym];if(!s)return;score(s);
       <p class="muted" style="font-size:12.5px;margin-top:10px">Each factor is 0 to 100, ranked against other stocks. Missing data counts as 50 (neutral).</p></div>
     <div class="card"><h3>Price, last 6 months</h3>${pc.html}</div>
     <div class="card"><h3>Seasonality: how ${TMN} has gone</h3>${sc.html}</div>
-    <div class="card"><h3>Latest news</h3>${nz?`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">${esc(nz.date)}</span></p><p class="ink2" style="font-size:14.5px">${esc(nz.text)}</p>${nz.url?`<p style="margin-top:8px;font-size:13.5px"><a href="${esc(nz.url)}" target="_blank" rel="noopener">Read it on ${esc(nz.src)}</a></p>`:''}`:`<p class="ink2" style="font-size:14px">The agent checks news for the top-ranked stocks only, and this one wasn't checked. Search before you act.</p>`}
+    <div class="card"><h3>Latest news</h3>${nz?`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">${esc(nz.date)}</span></p>${nz.items?(nz.items.length?`<ul class="ul" style="gap:9px">${nz.items.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:`<p class="ink2" style="font-size:14px">${esc(nz.text)}</p>`)+'<p class="muted" style="font-size:12.5px;margin-top:8px">Headlines collected automatically. The tone is judged from headline wording, so open the articles before acting.</p>':`<p class="ink2" style="font-size:14.5px">${esc(nz.text)}</p>${nz.url?`<p style="margin-top:8px;font-size:13.5px"><a href="${esc(nz.url)}" target="_blank" rel="noopener">Read it on ${esc(nz.src)}</a></p>`:''}`}`:`<p class="ink2" style="font-size:14px">The agent checks news for the top-ranked stocks only, and this one wasn't checked. Search before you act.</p>`}
       <p style="margin-top:8px;font-size:13.5px"><a href="https://www.google.com/search?tbm=nws&q=${encodeURIComponent(s.name+' share')}" target="_blank" rel="noopener">Search the latest news</a></p></div>
     ${fund.length?`<div class="card"><h3>Company numbers</h3><div class="kv">${fund.map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('')}</div><p class="muted" style="font-size:12.5px;margin-top:8px">Source: ${fsrc}.</p></div>`:''}
     <div class="card"><h3>Trade plan</h3><div class="kv">
@@ -549,7 +556,7 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
    ['Trend','var(--f2)','g-some','Supporting',`Price above rising 50 and 200-day averages. Every Momentum 30 stock passes this test; on its own it mainly filters out downtrends.`],
    ['Seasonality','var(--f4)','g-some','Some evidence',`Each month, stocks with the best history for that calendar month beat those with the worst in ${se.beat} of ${se.months} months: on average ${pct(se.top)} against ${pct(se.bot)} the next month, relative to the market.`],
    ['Company results','var(--f3)','g-none','Not testable here',`Profit growth, return on equity, debt and valuation, ranked against other stocks. Only past figures for about ${S.filter(s=>s.fFund!=null).length} stocks are on file, so it acts as a quality check, not a tested signal.`],
-   ['News','var(--f5)','g-none','Not testable here',`A plain reading of the latest results and announcements for the top picks, found by web search. It flags problems more than it predicts gains.`],
+   ['News','var(--f5)','g-none','Not testable here',`Recent headlines for the top-ranked stocks, collected every night. Tone is judged from the wording of the headlines, so read the articles. It flags problems more than it predicts gains.`],
    ['Swing setups','var(--f6)','g-weak','Weak evidence',`Over 20 days, ${best.map(x=>`${x.label.toLowerCase()}s beat the market by ${pct(x.avg,2)}`).join(', ')} on average, and won less than half the time. Useful for timing an entry, not for picking stocks.`]];
   $('#ev').innerHTML=items.map(([t,c,g,gl,p])=>`<div><h3><i class="sw" style="background:${c}"></i>${t}<span class="grade ${g}">${gl}</span></h3><p>${esc(p)}</p></div>`).join('');
   const pd=x=>new Date(x).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
