@@ -2,15 +2,17 @@
 """Backtest target / stop-loss swing trades on NSE daily data.
 
 Usage: DUMP=1 python3 build/build.py WD ; python3 build/backtest_trades.py WD
-Each signal is bought at the next day's close. Exit at the target or the stop, whichever the daily high/low reaches
-first (if both on the same day, the stop is assumed: the cautious choice), or at the close after MAX_DAYS.
+Each signal (seen at the close) is bought at the next day's OPEN. Exit at the target or the stop, whichever the daily
+high/low reaches first; if a day opens beyond either level (a gap), the exit is at that open price, so gaps through the
+stop cost more than 10%. If both are touched in one day, the stop is assumed (the cautious choice). Otherwise sell at the
+close after MAX_DAYS trading days.
 Costs 0.3% per round trip (brokerage, STT, slippage). Universe: the 300 most-traded stocks at the time, price >= Rs 10.
 Every entry rule is compared with random entries in the same universe on the same days, with the same exits.
 """
 import sys, json, numpy as np, pandas as pd
 WD = sys.argv[1]
 M = pd.read_pickle(f'{WD}/mats.pkl')
-C, H, L, TO, s50, s200, rsi, BRK = M['C'], M['H'], M['L'], M['TO'], M['s50'], M['s200'], M['rsi'], M['BRK']
+O, C, H, L, TO, s50, s200, rsi, BRK = M['O'], M['C'], M['H'], M['L'], M['TO'], M['s50'], M['s200'], M['rsi'], M['BRK']
 breadth, bavg = M['breadth'], M['bavg']
 COST, MAX_DAYS = 0.003, 40
 ret = C.pct_change(fill_method=None).clip(-0.5, 0.5)
@@ -35,18 +37,21 @@ SIG = {
  'Momentum top 30 + trend turn above 50-day': (mrank <= 30) & (C > s50) & (C.shift(1) <= s50.shift(1)),
 }
 
-Cv, Hv, Lv = C.values, H.values, L.values
+Ov, Cv, Hv, Lv = O.values, C.values, H.values, L.values
 dates = C.index
 
 def trade(i, j, tgt, stp):
     if i + 1 >= len(dates): return None
-    e = Cv[i + 1, j]
+    e = Ov[i + 1, j]
     if not np.isfinite(e) or e <= 0: return None
     T, S = e * (1 + tgt), e * (1 - stp)
     end = min(len(dates) - 1, i + 1 + MAX_DAYS)
-    for k in range(i + 2, end + 1):
-        h, l = Hv[k, j], Lv[k, j]
+    # entry day itself: can hit stop/target after the open
+    for k in range(i + 1, end + 1):
+        o, h, l = Ov[k, j], Hv[k, j], Lv[k, j]
         if not np.isfinite(l): continue
+        if k > i + 1 and np.isfinite(o) and o <= S: return (o / e - 1 - COST, k - i - 1, 'stop')
+        if k > i + 1 and np.isfinite(o) and o >= T: return (o / e - 1 - COST, k - i - 1, 'target')
         if l <= S: return (-stp - COST, k - i - 1, 'stop')
         if h >= T: return (tgt - COST, k - i - 1, 'target')
     c = Cv[end, j]
@@ -72,7 +77,7 @@ def summ(tr):
                 rising_avg=round(r[up].mean() * 100, 2) if up.any() else None, falling_avg=round(r[~up].mean() * 100, 2) if (~up).any() else None,
                 years={int(k): round(v, 2) for k, v in yrs.items()})
 
-GRID = [(0.10, 0.05), (0.10, 0.08), (0.15, 0.08), (0.20, 0.10), (0.08, 0.04)]
+GRID = [(0.20, 0.10), (0.15, 0.08), (0.10, 0.05)]
 res = {}
 base_mask = liq & C.shift(252).notna()
 for tgt, stp in GRID:
@@ -86,4 +91,4 @@ for tgt, stp in GRID:
         if not s: continue
         print(f"  {name:52s} trades {s['n']:6d} avg {s['avg']:+5.2f}% (vs random {s['avg']-b['avg']:+5.2f})  win {s['win']:4.1f}%  target hit {s['target_hit']:4.1f}%  {s['days']:4.1f} days  "
               f"market up {s['rising_avg']}% / down {s['falling_avg']}%  years {s['years']}")
-json.dump(dict(max_days=MAX_DAYS, cost=COST, results=res), open(f'{WD}/trades_bt.json', 'w'), indent=1)
+json.dump(dict(built=pd.Timestamp.now('UTC').strftime('%Y-%m-%dT%H:%MZ'), entry='next open, gaps exit at the open', max_days=MAX_DAYS, cost=COST, results=res), open(f'{WD}/trades_bt.json', 'w'), indent=1)

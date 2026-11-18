@@ -197,7 +197,7 @@ if os.path.exists(fp):
         else: print('fundamentals.csv skipped: no "NSE Code" or "Symbol" column')
     except Exception as e: print('fundamentals.csv skipped:',e)
 out=dict(sc=SC,scAsof=scasof,asof=f"{asof:%d %b %Y}",built=dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'),dates=[f"{d:%Y-%m-%d}" for d in C.index[-120:]],stocks=stocks,bt=bt,ev=EV,tmon=int(tmon))
-if os.environ.get('DUMP'): pd.to_pickle(dict(C=C,H=H,L=L,V=V,TO=TO,U=U,s50=s50,s200=s200,e20=e20,rsi=rsi,off=off,ts=ts,BRK=BRK,TIGHT=TIGHT,PULL=PULL,MR=MR,MX=MX,breadth=breadth,bavg=bavg),f"{WD}/mats.pkl")
+if os.environ.get('DUMP'): pd.to_pickle(dict(O=O,C=C,H=H,L=L,V=V,TO=TO,U=U,s50=s50,s200=s200,e20=e20,rsi=rsi,off=off,ts=ts,BRK=BRK,TIGHT=TIGHT,PULL=PULL,MR=MR,MX=MX,breadth=breadth,bavg=bavg),f"{WD}/mats.pkl")
 json.dump(out,open(f"{WD}/data.json",'w'),separators=(',',':'),ensure_ascii=False)
 buys=sorted([x for x in stocks if x['mrank'] and x['mrank']<=30],key=lambda x:x['mrank'])
 print(json.dumps(dict(fundamentals=len(SC),files=got,days=n,asof=out['asof'],stocks=len(stocks),buy=sum(x['signal']=='BUY' for x in stocks),rising=rising,breadth=bt['bnow'],top5=[x['sym'] for x in buys[:5]])))
