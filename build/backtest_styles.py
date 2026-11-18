@@ -39,12 +39,10 @@ def swing_score(i, univ):
     base = np.where((c > a50) & (a50 > a200), 45, np.where(c > a200, 30, 8))
     return pd.Series(np.where(b3, 90, np.where(tg, 80, np.where(pl, 72, base))), index=univ, dtype=float)
 
-STYLES = {
- 'Balanced': dict(mom=35, trend=20, seas=15, swing=5),
- 'Momentum': dict(mom=60, trend=25, seas=5, swing=0),
- 'Swing trade': dict(mom=20, trend=25, seas=15, swing=30),
- 'Long-term (price parts only)': dict(mom=25, trend=20, seas=5, swing=0),
- 'Momentum + seasonality': dict(mom=70, trend=0, seas=30, swing=0),
+STYLES = {   # same weights as the page's styles (fundamentals and news have no history, so they cannot change the order)
+ 'Balanced': dict(mom=70, trend=10, seas=10, swing=0),
+ 'Swing trade': dict(mom=85, trend=0, seas=0, swing=15),
+ 'Long-term (price parts only)': dict(mom=60, trend=0, seas=0, swing=0),
 }
 
 def run(min_n=4):
@@ -81,17 +79,14 @@ def stats(s, d):
     return dict(cagr=round(cagr * 100, 1), dd=round(dd * 100, 1), sharpe=round(sh, 2), years=by)
 
 R = run(4)
-out = dict(start=str(R.index[0].date()), end=str((me[-1]).date()), months=len(R), styles={})
+out = dict(built=pd.Timestamp.now('UTC').strftime('%Y-%m-%dT%H:%MZ'), start=str(R.index[0].date()), end=str((me[-1]).date()), months=len(R), styles={})
 basket = R['Basket: 300 most-traded']
 for k in R.columns:
     if k == 'rising': continue
     st = stats(R[k], R.index); st['beat'] = int((R[k] > basket).sum()) if k != 'Basket: 300 most-traded' else None
     g = R[k].where(R['rising'], 0.0); st['cautious'] = stats(g, R.index)
     out['styles'][k] = st
-R3 = run(3)
-out['seas_min3'] = {k: stats(R3[k], R3.index)['cagr'] for k in STYLES}
 for k, v in out['styles'].items():
     print(f"{k:34s} CAGR {v['cagr']:6.1f}%  worst fall {v['dd']:6.1f}%  Sharpe {v['sharpe']:5.2f}  beat basket {v['beat']}/{out['months']}  cautious CAGR {v['cautious']['cagr']:5.1f}% dd {v['cautious']['dd']:5.1f}%  {v['years']}")
-print('seasonality needing 3 years instead of 4:', out['seas_min3'])
 print('window', out['start'], out['end'], out['months'], 'months')
 json.dump(out, open(f'{WD}/styles_bt.json', 'w'), indent=1)
