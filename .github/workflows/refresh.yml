@@ -9,6 +9,7 @@ on:
       - 'build/news_fund.py'
 permissions:
   contents: write
+  models: read
 concurrency:
   group: refresh
   cancel-in-progress: false
@@ -42,7 +43,9 @@ jobs:
           cp wd/data.json data.json
       - name: Fetch news headlines and company numbers for the top-ranked stocks
         continue-on-error: true
-        timeout-minutes: 25
+        timeout-minutes: 35
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python build/news_fund.py
       - name: Commit new data
         run: |

@@ -7,6 +7,8 @@ Reads data.json and static.json, writes auto.json:
   sc:   company numbers from Screener.in public pages (quarterly profit and sales vs a year earlier, P/E, ROE,
         ROCE, market cap, promoter/FII/DII holdings, latest exchange announcements); Yahoo Finance fills gaps
 Anything that fails to download keeps its previous value (up to 60 days old). Never fails the build.
+With GITHUB_TOKEN set (GitHub Actions, permission models: read), an AI model on GitHub Models reads the collected
+results, exchange announcements and headlines for each stock and writes a short summary, tone and main risk.
 Needs network access to news.google.com and Yahoo Finance; yfinance is optional.
 """
 import json, os, re, sys, time, datetime as dt, urllib.request, urllib.parse
@@ -65,7 +67,7 @@ def parse_rss(xml_bytes, must):
         k = re.sub(r'\W+', '', x['t'].lower())[:60]
         if k in seen: continue
         seen.add(k); out.append(x)
-    return out[:5]
+    return out[:8]
 
 def tone(items):
     p = sum(1 for x in items if re.search(POS, x['t'], re.I))
@@ -192,6 +194,53 @@ def fund_for(sym):
                 out.update(q=c0.strftime('%b %Y'), np=cr(vals[0]), npYoY=cr(vals[1]), sales=cr(vals[2]), salesYoY=cr(vals[3]))
     return {k: v for k, v in out.items() if v is not None}
 
+# ---------- AI reading (GitHub Models, free with the workflow's GITHUB_TOKEN) ----------
+MODELS = ['openai/gpt-4.1-mini', 'openai/gpt-4o-mini', 'openai/gpt-4.1', 'openai/gpt-4o']
+SYSTEM = (
+ "You are a careful equity research assistant for Indian (NSE) stocks. You are given facts collected today: "
+ "the latest quarterly results, the company's own stock-exchange announcements (with one-line summaries), shareholding changes, "
+ "and recent news headlines with dates and sources. Using ONLY these facts, judge what the recent news means for a shareholder. "
+ "Rules: never invent numbers, events or dates; prefer exchange announcements and reported results over headlines; ignore "
+ "generic market-wrap or 'stocks to watch' headlines that say nothing specific about the company; ignore routine filings "
+ "(newspaper publications, trading-window closures, investor-meet intimations) unless they contain news. "
+ "Reply with JSON only: {\"tone\": \"Positive\"|\"Mixed\"|\"Negative\"|\"Neutral\", "
+ "\"summary\": \"2-3 plain-English sentences with the key facts and numbers\", "
+ "\"watch\": \"one short risk a shareholder should know, or empty string\"}. "
+ "Use Neutral when there is no meaningful company-specific news.")
+
+def facts_for(stock, n, f):
+    lines = [f"Company: {stock['name']} (NSE: {stock['sym']}), sector {stock['sector']}. Today: {NOW.strftime('%d %b %Y')}."]
+    if f.get('np') is not None and f.get('npYoY') is not None:
+        r = f"Results for quarter ending {f.get('q','?')} ({f.get('src','')}): net profit Rs {f['np']} cr vs Rs {f['npYoY']} cr a year earlier"
+        if f.get('sales') is not None and f.get('salesYoY') is not None: r += f"; sales Rs {f['sales']} cr vs Rs {f['salesYoY']} cr"
+        lines.append(r + '.')
+    for k, lab in (('prom', 'Promoter'), ('fii', 'FII'), ('dii', 'DII')):
+        if isinstance(f.get(k), list): lines.append(f"{lab} holding: {f[k][0]}% previous quarter -> {f[k][1]}% latest.")
+    if f.get('pe') is not None: lines.append(f"P/E {f['pe']}, ROE {f.get('roe','?')}%.")
+    for x in (f.get('filings') or [])[:5]: lines.append(f"Exchange announcement: {x['t']}. {x.get('d','')}")
+    for x in (n.get('items') or [])[:8]: lines.append(f"Headline ({x.get('src','')}, {x.get('date','')}): {x['t']}")
+    return '\n'.join(lines)
+
+def ai_read(text, token):
+    last = None
+    for m in list(MODELS):
+        body = json.dumps(dict(model=m, temperature=0.1, max_tokens=350, response_format={'type': 'json_object'},
+                               messages=[dict(role='system', content=SYSTEM), dict(role='user', content=text)])).encode()
+        req = urllib.request.Request('https://models.github.ai/inference/chat/completions', data=body, method='POST',
+                                     headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json', 'Accept': 'application/json'})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r: res = json.loads(r.read())
+            out = json.loads(res['choices'][0]['message']['content'])
+            if out.get('tone') not in ('Positive', 'Mixed', 'Negative', 'Neutral') or not out.get('summary'): raise ValueError(f'bad reply {out}')
+            if m != MODELS[0]: MODELS.remove(m); MODELS.insert(0, m)
+            return out, m
+        except urllib.error.HTTPError as e:
+            last = f'{m}: HTTP {e.code} {e.read()[:150]!r}'
+            if e.code == 429: raise RuntimeError(last)
+        except Exception as e:
+            last = f'{m}: {e}'
+    raise RuntimeError(last)
+
 def main():
     D = json.load(open(os.path.join(ROOT, 'data.json')))
     ap = os.path.join(ROOT, 'auto.json')
@@ -266,6 +315,29 @@ def main():
             f['fetched'] = NOW.strftime('%Y-%m-%d'); sc[s['sym']] = f; LOG['fund_ok'] += 1
         else:
             LOG['fund_fail'] += 1
+    token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_MODELS_TOKEN')
+    LOG['ai_ok'] = LOG['ai_kept'] = LOG['ai_fail'] = 0
+    if token:
+        import hashlib
+        for s in picks:
+            sym = s['sym']; n = news.get(sym)
+            if not n: continue
+            text = facts_for(s, n, sc.get(sym, {}))
+            h = hashlib.sha1(text.split('\n', 1)[-1].encode()).hexdigest()[:12]
+            old = (OLD.get('news') or {}).get(sym, {})
+            if old.get('ai') and old.get('ihash') == h:
+                for k in ('tone', 'text', 'watch', 'ai', 'ihash', 'model'): n[k] = old.get(k, n.get(k))
+                LOG['ai_kept'] += 1; continue
+            try:
+                out, model = ai_read(text, token)
+                n.update(tone=out['tone'], text=out['summary'].strip(), watch=(out.get('watch') or '').strip(), ai=True, ihash=h, model=model)
+                LOG['ai_ok'] += 1
+            except Exception as e:
+                LOG['ai_fail'] += 1; note(f'ai {sym}: {e}')
+                if 'HTTP 429' in str(e): break
+            time.sleep(4.5)
+    else:
+        note('no GITHUB_TOKEN: AI reading skipped')
     LOG['finished'] = dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ')
     out = dict(asof=NOW.astimezone(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime('%d %b %Y').lstrip('0'), news=news, sc=sc, log=LOG)
     json.dump(out, open(ap, 'w'), ensure_ascii=False, separators=(',', ':'))
