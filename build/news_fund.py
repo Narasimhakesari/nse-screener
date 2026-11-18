@@ -124,6 +124,7 @@ def _ratio(html, name):
 def screener_for(sym):
     out = {}
     for path in ('consolidated/', ''):
+        if path == '': time.sleep(5)
         html = fetch(f'https://www.screener.in/company/{urllib.parse.quote(sym)}/{path}', timeout=25).decode('utf-8', 'replace')
         head, body = _table(_section(html, 'quarters'))
         npr = next((body[k] for k in body if k.lower().startswith('net profit')), None)
@@ -217,16 +218,38 @@ def main():
         have_yf = True
     except Exception as e:
         have_yf = False; note(f'yfinance not installed: {e}')
-    LOG['screener_ok'] = LOG['screener_fail'] = 0
-    for s in picks:
+    LOG['screener_ok'] = LOG['screener_fail'] = LOG['screener_kept'] = 0
+    def age_days(e):
+        try: return (NOW.date() - dt.datetime.strptime(e.get('fetched', ''), '%Y-%m-%d').date()).days
+        except Exception: return 999
+    # Oldest (or missing) Screener numbers first; at most SCREENER_MAX pages a night, a few seconds apart.
+    SCREENER_MAX, budget, blocked = 30, 30, False
+    order = sorted(picks, key=lambda s: -(age_days(sc[s['sym']]) if sc.get(s['sym'], {}).get('src') == 'Screener.in' else 999))
+    for s in order:
+        prev = sc.get(s['sym'])
+        have_recent = prev is not None and prev.get('src') == 'Screener.in' and age_days(prev) <= 6
         f = {}
-        try:
-            f = screener_for(s['sym'])
-            if f.get('np') is not None or f.get('pe') is not None: LOG['screener_ok'] += 1
-            else: LOG['screener_fail'] += 1; note(f"screener {s['sym']}: no numbers parsed")
-        except Exception as e:
-            LOG['screener_fail'] += 1; note(f"screener {s['sym']}: {e}")
-        time.sleep(2.5)
+        if (budget <= 0 or blocked) and prev is not None and prev.get('src') == 'Screener.in':
+            LOG['screener_kept'] += 1; continue
+        if have_recent:
+            LOG['screener_kept'] += 1; continue
+        if budget > 0 and not blocked:
+            budget -= 1
+            for attempt in (1, 2):
+                try:
+                    f = screener_for(s['sym'])
+                    if f.get('np') is not None or f.get('pe') is not None: LOG['screener_ok'] += 1
+                    else: LOG['screener_fail'] += 1; note(f"screener {s['sym']}: no numbers parsed")
+                    break
+                except Exception as e:
+                    if '429' in str(e) and attempt == 1:
+                        time.sleep(90); continue
+                    LOG['screener_fail'] += 1; note(f"screener {s['sym']}: {e}")
+                    if '429' in str(e): blocked = True
+                    break
+            time.sleep(5)
+        if not f and prev is not None and prev.get('src') == 'Screener.in':
+            LOG['screener_kept'] += 1; continue
         if have_yf:
             try:
                 y = fund_for(s['sym'])
