@@ -8,6 +8,9 @@ on:
       - 'fundamentals.csv'
       - 'build/news_fund.py'
       - 'build/notify.py'
+      - 'build/build.py'
+      - 'build/backtest_styles.py'
+      - '.github/workflows/refresh.yml'
 permissions:
   contents: write
 concurrency:
