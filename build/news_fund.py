@@ -227,6 +227,23 @@ def _parse_reply(content):
     m = re.search(r'\{.*\}', c, re.S)
     return json.loads(m.group(0) if m else c)
 
+def _post_models(payload, token):
+    """POST to GitHub Models the way GitHub's docs show (curl), returning (status, body bytes)."""
+    import subprocess, tempfile
+    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as fh:
+        json.dump(payload, fh); fn = fh.name
+    try:
+        r = subprocess.run(['curl', '-sS', '-X', 'POST', 'https://models.github.ai/inference/chat/completions',
+                            '-H', 'Content-Type: application/json', '-H', 'Accept: application/vnd.github+json',
+                            '-H', f'Authorization: Bearer {token}', '-H', 'X-GitHub-Api-Version: 2022-11-28',
+                            '--data-binary', f'@{fn}', '-w', '\n%{http_code}', '--max-time', '90'],
+                           capture_output=True, timeout=120)
+    finally:
+        os.unlink(fn)
+    out = r.stdout.rsplit(b'\n', 1)
+    code = int(out[1]) if len(out) == 2 and out[1].strip().isdigit() else 0
+    return code, out[0] if len(out) == 2 else r.stdout + r.stderr
+
 def ai_read(text, token):
     errs = []
     for m in list(MODELS):
@@ -234,12 +251,12 @@ def ai_read(text, token):
             payload = dict(model=m, temperature=0.1, max_tokens=400,
                            messages=[dict(role='system', content=SYSTEM), dict(role='user', content=text)])
             if use_fmt: payload['response_format'] = {'type': 'json_object'}
-            req = urllib.request.Request('https://models.github.ai/inference/chat/completions', data=json.dumps(payload).encode(), method='POST',
-                                         headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json',
-                                                  'Accept': 'application/json', 'X-GitHub-Api-Version': '2022-11-28'})
-            raw = b''
+            code, raw = _post_models(payload, token)
+            if code == 429 or code in (401, 403):
+                errs.append(f'{m}: HTTP {code} {raw[:200]!r}'); raise RuntimeError(' | '.join(errs))
+            if code != 200:
+                errs.append(f'{m} fmt={use_fmt}: HTTP {code} {raw[:200]!r}'); continue
             try:
-                with urllib.request.urlopen(req, timeout=60) as r: raw = r.read()
                 res = json.loads(raw)
                 content = res['choices'][0]['message'].get('content')
                 out = _parse_reply(content)
@@ -247,11 +264,6 @@ def ai_read(text, token):
                     raise ValueError(f'bad reply: {str(content)[:160]}')
                 if m != MODELS[0]: MODELS.remove(m); MODELS.insert(0, m)
                 return out, m
-            except urllib.error.HTTPError as e:
-                body = e.read()[:200]
-                errs.append(f'{m} fmt={use_fmt}: HTTP {e.code} {body!r}')
-                if e.code == 429: raise RuntimeError(' | '.join(errs))
-                if e.code in (401, 403): raise RuntimeError(' | '.join(errs))
             except Exception as e:
                 errs.append(f'{m} fmt={use_fmt}: {e} raw={raw[:160]!r}')
     raise RuntimeError(' | '.join(errs))
