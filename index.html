@@ -290,7 +290,7 @@ dialog.drawer[open]{animation:slide .22s ease-out}
 
   <footer class="foot">
     <p><b>Not investment advice.</b> This is a rules-based ranking from public data, not a recommendation to buy or sell. Prices are end-of-day, not live. Check the current price and the company's latest filings before you trade.</p>
-    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. Company numbers: Yahoo Finance for the top-ranked stocks, fetched nightly, plus Screener.in and MoneyWorks4Me where available; others count as neutral. News: Google News headlines for the top-ranked stocks, last checked <span id="newsAsof"></span>; tone is judged from headline wording.</p>
+    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. Company numbers: Screener.in public pages for the top-ranked stocks, fetched nightly (Yahoo Finance fills gaps), plus MoneyWorks4Me for the Nifty 50; others count as neutral. News: Google News headlines for the top-ranked stocks, last checked <span id="newsAsof"></span>; tone is judged from headline wording.</p>
     <p><b>Limits.</b> Small stocks move fast and can gap past a stop-loss. Seasonality uses at most five years per month. Splits and bonuses are detected from one-day price drops and adjusted; dividends are not.</p>
   </footer>
 </div>
@@ -331,7 +331,8 @@ const pr=(arr,v,hi)=>{if(v==null||!isFinite(v)||arr.length<5)return null;let n=0
 S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.news=NEWS[s.sym]||null;
   const man=(D.sc||{})[s.sym]||(ST.sc||{})[s.sym]||null,au=(AUTO.sc||{})[s.sym]||null;
   s.scSrc=man?`Screener.in, ${(D.sc||{})[s.sym]?D.scAsof:ST.scAsof}`:'';
-  if(au&&(!man||dnum(au.q)>dnum(man.q)||man.np==null)){s.sc=Object.assign({},man||{},au);s.scSrc=`Yahoo Finance, fetched ${au.fetched||''}`+(man?' (ownership from Screener.in)':'');}else s.sc=man;});
+  if(au&&(!man||man.np==null||(au.q&&dnum(au.q)>=dnum(man.q))||(!au.q&&au.src==='Screener.in'))){s.sc=Object.assign({},man||{},au);if(!au.q&&man&&man.q){['q','np','npYoY','sales','salesYoY'].forEach(k=>s.sc[k]=man[k]);}s.scSrc=`${au.src||'Yahoo Finance'}, fetched ${au.fetched||''}`;}else s.sc=man;
+  s.filings=au&&au.filings||null;});
 (function(){
   const fin=s=>s.sector==='Financial Services';
   const A=(get,filt=()=>true)=>S.map(s=>filt(s)?get(s):null).filter(v=>v!=null&&isFinite(v));
@@ -530,6 +531,7 @@ function openStock(sym){const s=BY[sym];if(!s)return;score(s);
     <div class="card"><h3>Price, last 6 months</h3>${pc.html}</div>
     <div class="card"><h3>Seasonality: how ${TMN} has gone</h3>${sc.html}</div>
     <div class="card"><h3>Latest news</h3>${nz?`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">${esc(nz.date)}</span></p>${nz.items?(nz.items.length?`<ul class="ul" style="gap:9px">${nz.items.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:`<p class="ink2" style="font-size:14px">${esc(nz.text)}</p>`)+'<p class="muted" style="font-size:12.5px;margin-top:8px">Headlines collected automatically. The tone is judged from headline wording, so open the articles before acting.</p>':`<p class="ink2" style="font-size:14.5px">${esc(nz.text)}</p>${nz.url?`<p style="margin-top:8px;font-size:13.5px"><a href="${esc(nz.url)}" target="_blank" rel="noopener">Read it on ${esc(nz.src)}</a></p>`:''}${nz.more&&nz.more.length?`<p class="muted" style="font-size:12.5px;margin:12px 0 6px">Newer headlines, collected automatically</p><ul class="ul" style="gap:7px">${nz.more.slice(0,3).map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:''}`}`:`<p class="ink2" style="font-size:14px">The agent checks news for the top-ranked stocks only, and this one wasn't checked. Search before you act.</p>`}
+      ${s.filings?`<p class="muted" style="font-size:12.5px;margin:14px 0 6px">Latest stock-exchange announcements</p><ul class="ul" style="gap:7px">${s.filings.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a>${x.d?` <span class="muted" style="font-size:12.5px">${esc(x.d)}</span>`:''}</span></li>`).join('')}</ul>`:''}
       <p style="margin-top:8px;font-size:13.5px"><a href="https://www.google.com/search?tbm=nws&q=${encodeURIComponent(s.name+' share')}" target="_blank" rel="noopener">Search the latest news</a></p></div>
     ${fund.length?`<div class="card"><h3>Company numbers</h3><div class="kv">${fund.map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('')}</div><p class="muted" style="font-size:12.5px;margin-top:8px">Source: ${fsrc}.</p></div>`:''}
     <div class="card"><h3>Trade plan</h3><div class="kv">

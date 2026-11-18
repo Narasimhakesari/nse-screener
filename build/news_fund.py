@@ -4,7 +4,8 @@
 Usage: python3 build/news_fund.py            (run from the repository root, after data.json is rebuilt)
 Reads data.json and static.json, writes auto.json:
   news: latest Google News headlines per stock, with a tone judged from headline wording
-  sc:   latest quarterly profit and sales vs a year earlier, P/E, ROE, debt and market cap from Yahoo Finance
+  sc:   company numbers from Screener.in public pages (quarterly profit and sales vs a year earlier, P/E, ROE,
+        ROCE, market cap, promoter/FII/DII holdings, latest exchange announcements); Yahoo Finance fills gaps
 Anything that fails to download keeps its previous value (up to 60 days old). Never fails the build.
 Needs network access to news.google.com and Yahoo Finance; yfinance is optional.
 """
@@ -88,6 +89,81 @@ def news_for(s):
     return dict(tone=tone(items), date=d(top['when']), text=top['t'], src=top['src'], url=top['url'], auto=True,
                 items=[dict(t=x['t'], src=x['src'], url=x['url'], date=d(x['when'])) for x in items])
 
+# ---------- company numbers: Screener.in (public company pages, no login) ----------
+def _txt(h):
+    h = re.sub(r'<[^>]+>', ' ', h).replace('&nbsp;', ' ').replace('&amp;', '&')
+    return re.sub(r'\s+', ' ', h).strip(' +')
+
+def _num(t):
+    t = t.replace(',', '').replace('%', '').replace('₹', '').replace('Cr.', '').strip()
+    try: return float(t)
+    except Exception: return None
+
+def _section(html, sid):
+    m = re.search(r'<section[^>]*id="%s"[^>]*>(.*?)</section>' % sid, html, re.S)
+    return m.group(1) if m else ''
+
+def _table(sec):
+    m = re.search(r'<table[^>]*>(.*?)</table>', sec, re.S)
+    if not m: return [], {}
+    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', m.group(1), re.S)
+    head, body = [], {}
+    for r in rows:
+        cells = [_txt(c) for c in re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', r, re.S)]
+        if not cells: continue
+        if not head and re.search(r'<th', r): head = cells[1:]; continue
+        body[cells[0]] = cells[1:]
+    return head, body
+
+def _ratio(html, name):
+    m = re.search(r'<span class="name">\s*%s\s*</span>(.*?)</li>' % re.escape(name), html, re.S)
+    if not m: return None
+    nums = re.findall(r'<span class="number">([^<]*)</span>', m.group(1))
+    return _num(nums[0]) if nums else None
+
+def screener_for(sym):
+    out = {}
+    for path in ('consolidated/', ''):
+        html = fetch(f'https://www.screener.in/company/{urllib.parse.quote(sym)}/{path}', timeout=25).decode('utf-8', 'replace')
+        head, body = _table(_section(html, 'quarters'))
+        npr = next((body[k] for k in body if k.lower().startswith('net profit')), None)
+        rev = next((body[k] for k in body if k.lower().split()[0] in ('sales', 'revenue')), None) if body else None
+        if head and npr:
+            break
+    out.update(mcap=_ratio(html, 'Market Cap'), pe=_ratio(html, 'Stock P/E'), roce=_ratio(html, 'ROCE'), roe=_ratio(html, 'ROE'))
+    if head and npr:
+        last = head[-1]
+        try:
+            mon, yr = last.split()[0], int(last.split()[1])
+            prev = f'{mon} {yr - 1}'
+            if prev in head:
+                i0, i1 = len(head) - 1, head.index(prev)
+                v = dict(np=_num(npr[i0]), npYoY=_num(npr[i1]))
+                if rev: v.update(sales=_num(rev[i0]), salesYoY=_num(rev[i1]))
+                if v['np'] is not None and v['npYoY'] is not None:
+                    out.update(v); out['q'] = last
+        except Exception as e:
+            note(f'screener quarters {sym}: {e}')
+    sh_head, sh = _table(_section(html, 'shareholding'))
+    for lab, key in (('Promoters', 'prom'), ('FIIs', 'fii'), ('DIIs', 'dii')):
+        row = next((sh[k] for k in sh if k.startswith(lab)), None)
+        if row and len(row) >= 2 and _num(row[-1]) is not None and _num(row[-2]) is not None:
+            out[key] = [_num(row[-2]), _num(row[-1])]
+    fil = []
+    docs = _section(html, 'documents')
+    m = re.search(r'Announcements.*?<ul[^>]*>(.*?)</ul>', docs, re.S)
+    if m:
+        for a in re.findall(r'<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>', m.group(1), re.S)[:4]:
+            inner = a[1]
+            sub = re.search(r'<div[^>]*>(.*?)</div>', inner, re.S)
+            title = _txt(re.sub(r'<div[^>]*>.*?</div>', '', inner, flags=re.S))
+            detail = _txt(sub.group(1)) if sub else ''
+            if title: fil.append(dict(t=title[:160], d=detail[:220], url=a[0] if a[0].startswith('http') else 'https://www.screener.in' + a[0]))
+    if fil: out['filings'] = fil
+    out = {k: v for k, v in out.items() if v is not None}
+    if out: out['src'] = 'Screener.in'
+    return out
+
 # ---------- company numbers ----------
 def fund_for(sym):
     import yfinance as yf
@@ -141,17 +217,32 @@ def main():
         have_yf = True
     except Exception as e:
         have_yf = False; note(f'yfinance not installed: {e}')
-    if have_yf:
-        for s in picks:
+    LOG['screener_ok'] = LOG['screener_fail'] = 0
+    for s in picks:
+        f = {}
+        try:
+            f = screener_for(s['sym'])
+            if f.get('np') is not None or f.get('pe') is not None: LOG['screener_ok'] += 1
+            else: LOG['screener_fail'] += 1; note(f"screener {s['sym']}: no numbers parsed")
+        except Exception as e:
+            LOG['screener_fail'] += 1; note(f"screener {s['sym']}: {e}")
+        time.sleep(2.5)
+        if have_yf:
             try:
-                f = fund_for(s['sym'])
-                if len(f) > 1:
-                    f['fetched'] = NOW.strftime('%Y-%m-%d'); sc[s['sym']] = f; LOG['fund_ok'] += 1
-                else:
-                    LOG['fund_fail'] += 1
+                y = fund_for(s['sym'])
+                for k, v in y.items():
+                    if k == 'src': continue
+                    if k in ('q', 'np', 'npYoY', 'sales', 'salesYoY'):
+                        if f.get('np') is None and y.get('np') is not None: f[k] = v
+                    elif f.get(k) is None: f[k] = v
+                if not f.get('src') and len(y) > 1: f['src'] = 'Yahoo Finance'
             except Exception as e:
-                LOG['fund_fail'] += 1; note(f"fund {s['sym']}: {e}")
-            time.sleep(1.0)
+                note(f"yahoo {s['sym']}: {e}")
+            time.sleep(0.8)
+        if len(f) > 1:
+            f['fetched'] = NOW.strftime('%Y-%m-%d'); sc[s['sym']] = f; LOG['fund_ok'] += 1
+        else:
+            LOG['fund_fail'] += 1
     LOG['finished'] = dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%MZ')
     out = dict(asof=NOW.astimezone(dt.timezone(dt.timedelta(hours=5, minutes=30))).strftime('%d %b %Y').lstrip('0'), news=news, sc=sc, log=LOG)
     json.dump(out, open(ap, 'w'), ensure_ascii=False, separators=(',', ':'))
