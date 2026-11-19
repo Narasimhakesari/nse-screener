@@ -19,9 +19,11 @@ GRID = '--grid' in sys.argv
 in30 = MR <= 30
 FRESH = in30 & ~(in30.rolling(20, min_periods=1).max().shift(1).fillna(0).astype(bool))
 IN10 = MR <= 10
-ENTRIES = {'fresh30': ('Newly entered the top 30 by momentum', FRESH), 'top10': ('In the top 10 by momentum', IN10)}
+in50 = MR <= 50
+FRESH50 = in50 & ~(in50.rolling(20, min_periods=1).max().shift(1).fillna(0).astype(bool))
+ENTRIES = {'fresh30': ('Newly entered the top 30 by momentum', FRESH), 'top10': ('In the top 10 by momentum', IN10), 'fresh50': ('Newly entered the top 50 by momentum', FRESH50)}
 
-def sim(entry, target=None, stop=.10, days=40, trail=None, maxpos=10, mood=False, lo=START, hi=None, log=False, state=None):
+def sim(entry, target=None, stop=.10, days=40, trail=None, maxpos=10, mood=False, lo=START, hi=None, log=None, state=None):
     hi = hi or n - 1
     Pv = (-MR).reindex(index=dates, columns=C.columns).values
     Ev = entry.reindex(index=dates, columns=C.columns).fillna(False).values
@@ -30,14 +32,15 @@ def sim(entry, target=None, stop=.10, days=40, trail=None, maxpos=10, mood=False
         for j in list(pos):
             p = pos[j]; o, l, h = Ov[i, j], Lv[i, j], Hv[i, j]
             px = r = None
-            if p.get('sell_open') and np.isfinite(o): px, r = o, 'time'
+            if not np.isfinite(Cv[i, j]) and i > p['bi']: px, r = p.get('lc', p['e']), 'time'   # stopped trading (symbol change, delisting): out at the last price
+            elif p.get('sell_open') and np.isfinite(o): px, r = o, 'time'
             elif i > p['bi'] and np.isfinite(o) and o <= p['stop']: px, r = o, 'stop'
             elif np.isfinite(l) and l <= p['stop']: px, r = p['stop'], 'stop'
             elif target and i > p['bi'] and np.isfinite(o) and o >= p['tgt']: px, r = o, 'target'
             elif target and np.isfinite(h) and h >= p['tgt']: px, r = p['tgt'], 'target'
             if px is not None:
                 cash += p['sh'] * px * (1 - COST); trades.append(px / p['e'] - 1 - 2 * COST); why.append(r)
-                if log: log.append(dict(sym=C.columns[j], buy=str(dates[p['bi']].date()), sell=str(dates[i].date()), why=r, ret=round((px / p['e'] - 1 - 2 * COST) * 100, 2), days=i - p['bi']))
+                if log is not None: log.append(dict(sym=C.columns[j], buy=str(dates[p['bi']].date()), sell=str(dates[i].date()), why=r, ret=round((px / p['e'] - 1 - 2 * COST) * 100, 2), days=i - p['bi']))
                 del pos[j]
         if pend:
             for j in pend:
@@ -48,7 +51,9 @@ def sim(entry, target=None, stop=.10, days=40, trail=None, maxpos=10, mood=False
                 if val < eqv / maxpos * 0.5: break
                 cash -= val
                 pos[j] = dict(e=o, sh=val / (o * (1 + COST)), bi=i, hc=o, stop=o * (1 - stop), tgt=o * (1 + (target or 9)))
-        eqv = cash + sum(p['sh'] * (Cv[i, j] if np.isfinite(Cv[i, j]) else p['e']) for j, p in pos.items())
+        for j, p in pos.items():
+            if np.isfinite(Cv[i, j]): p['lc'] = Cv[i, j]
+        eqv = cash + sum(p['sh'] * p.get('lc', p['e']) for j, p in pos.items())
         eq.append(eqv)
         for j, p in pos.items():
             c = Cv[i, j]
@@ -85,25 +90,25 @@ def label(r):
     s = f"{int(r['trail']*100)}% trailing stop" if r['trail'] else f"{int(r['stop']*100)}% stop"
     return f"{t}, {s}, sell after {r['days']} days"
 
-RULE = dict(target=.20, stop=.10, days=21, maxpos=5)   # chosen from the grid: see README
+RULE = dict(target=.20, stop=.08, days=30, maxpos=5)   # chosen on 2022-24 data, checked on 2025-26: see build/backtest_ideas.py and README
 LIVE_SINCE = '2026-11-20'
 
 def nightly():
     bF, bD = bench(START, n - 1); bA, _ = bench(START, MID - 1); bB, _ = bench(MID, n - 1)
     log, stt = [], {}
-    e, tr, why = sim(FRESH, log=log, state=stt, **RULE)
-    full = stats(e, tr); em, trm, _ = sim(FRESH, mood=True, **RULE); mood = stats(em, trm)
-    a = stats(sim(FRESH, hi=MID - 1, **RULE)[0], np.array([]))['cagr']; b = stats(sim(FRESH, lo=MID, **RULE)[0], np.array([]))['cagr']
+    e, tr, why = sim(FRESH50, log=log, state=stt, **RULE)
+    full = stats(e, tr); em, trm, _ = sim(FRESH50, mood=True, **RULE); mood = stats(em, trm)
+    a = stats(sim(FRESH50, hi=MID - 1, **RULE)[0], np.array([]))['cagr']; b = stats(sim(FRESH50, lo=MID, **RULE)[0], np.array([]))['cagr']
     w = pd.Series(why).value_counts(normalize=True).mul(100).round(1).to_dict()
-    rng = [stats(sim(FRESH, **dict(RULE, days=dy))[0], np.array([]))['cagr'] for dy in (18, 19, 20, 21, 22, 23, 25)]
+    rng = [stats(sim(FRESH50, **dict(RULE, days=dy))[0], np.array([]))['cagr'] for dy in (25, 27, 28, 30, 32, 33, 35)]
     grid = []
     for tg in (None, .10, .15, .20, .30, .40):
-        for st in (.07, .10, .15):
-            r_ = row('', 'fresh30', **dict(RULE, target=tg, stop=st)); grid.append({k: r_[k] for k in ('target', 'stop', 'cagr', 'dd', 'first', 'second', 'hit_target', 'win')})
+        for st in (.05, .08, .10):
+            r_ = row('', 'fresh50', **dict(RULE, target=tg, stop=st)); grid.append({k: r_[k] for k in ('target', 'stop', 'cagr', 'dd', 'first', 'second', 'hit_target', 'win')})
     others = {}
-    for lbl, kw in [('Same, but up to 10 trades at a time', dict(RULE, maxpos=10)), ('Same, but sell after 40 days', dict(RULE, days=40)),
+    for lbl, kw in [('Same, but up to 10 trades at a time', dict(RULE, maxpos=10)), ('Same, but sell after 20 days', dict(RULE, days=20)),
                     ('Same, but no profit target', dict(RULE, target=None))]:
-        r_ = row('', 'fresh30', **kw); others[lbl] = {k: r_[k] for k in ('cagr', 'dd', 'first', 'second', 'hit_target', 'win')}
+        r_ = row('', 'fresh50', **kw); others[lbl] = {k: r_[k] for k in ('cagr', 'dd', 'first', 'second', 'hit_target', 'win')}
     # live state at the last close
     last = dates[-1]; nb = lambda k: (pd.Timestamp(last) + pd.offsets.BDay(k))
     def sell_by(bi):
@@ -119,10 +124,10 @@ def nightly():
     cand = [dict(sym=C.columns[j], rank=int(MR.iloc[-1, j]), close=round(float(Cv[-1, j]), 2)) for j in stt['pend']]
     buys, queue = cand[:max(free, 0)], cand[max(free, 0):]
     closed = [x for x in log if x['sell'] == str(last.date())]
-    fresh_today = [C.columns[j] for j in np.nonzero(FRESH.iloc[-1].fillna(False).values)[0]]
+    fresh_today = [C.columns[j] for j in np.nonzero(FRESH50.iloc[-1].fillna(False).values)[0]]
     wk = e.resample('W-FRI').last().dropna(); be = (1 + bret.iloc[START:]).cumprod(); bw = be.reindex(wk.index, method='ffill')
     out = dict(built=pd.Timestamp.now('UTC').strftime('%Y-%m-%dT%H:%MZ'), start=str(dates[START].date()), end=str(last.date()), split='2025-01-01',
-               rule=dict(RULE, entry='Newly entered the top 30 of the 300 most-traded stocks by momentum (not in the top 30 in the 20 days before)'),
+               rule=dict(RULE, entry='Newly entered the top 50 of the 300 most-traded stocks by momentum (not in the top 50 in the 20 days before)'),
                liveSince=LIVE_SINCE,
                stats=dict(full, first=a, second=b, hit_target=w.get('target', 0.0), hit_stop=w.get('stop', 0.0), timed_out=w.get('time', 0.0),
                           range=[min(rng), max(rng)], per_year=round(len(tr) / ((e.index[-1] - e.index[0]).days / 365.25))),

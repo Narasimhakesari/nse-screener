@@ -68,7 +68,8 @@ def simulate(entry, prio, ex, mood=False, lo=START, hi=None):
         for j in list(pos):
             p = pos[j]; o, l, h = Ov[i, j], Lv[i, j], Hv[i, j]
             px = None
-            if p.get('sell_open') and np.isfinite(o): px = o
+            if not np.isfinite(Cv[i, j]) and i > p['bi']: px = p.get('lc', p['e'])   # stopped trading: out at the last price
+            elif p.get('sell_open') and np.isfinite(o): px = o
             elif i > p['bi'] and ex.get('stop') and np.isfinite(o) and o <= p['stop']: px = o
             elif ex.get('stop') and np.isfinite(l) and l <= p['stop']: px = p['stop']
             elif ex.get('target') and i > p['bi'] and np.isfinite(o) and o >= p['tgt']: px = o
@@ -86,7 +87,9 @@ def simulate(entry, prio, ex, mood=False, lo=START, hi=None):
                 sh = val / (o * (1 + COST)); cash -= val
                 pos[j] = dict(e=o, sh=sh, bi=i, stop=o * (1 - ex.get('stop', 1)), tgt=o * (1 + ex.get('target', 9)))
         # 3) mark to market at the close
-        eqv = cash + sum(p['sh'] * (Cv[i, j] if np.isfinite(Cv[i, j]) else p['e']) for j, p in pos.items())
+        for j, p in pos.items():
+            if np.isfinite(Cv[i, j]): p['lc'] = Cv[i, j]
+        eqv = cash + sum(p['sh'] * p.get('lc', p['e']) for j, p in pos.items())
         eq.append(eqv)
         # 4) decisions at the close: exits for tomorrow's open, then new signals
         for j, p in pos.items():

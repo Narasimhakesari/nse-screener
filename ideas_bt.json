@@ -1,0 +1,613 @@
+{
+ "built": "2026-11-19T06:35Z",
+ "train": [
+  "2022-09-23",
+  "2024-12-31"
+ ],
+ "test": [
+  "2025-01-01",
+  "2026-11-18"
+ ],
+ "bench": {
+  "train": {
+   "cagr": 29.6,
+   "dd": -12.8,
+   "sharpe": 1.7,
+   "trades": 0,
+   "win": null,
+   "avg": null,
+   "years": {
+    "2022": 2.7,
+    "2023": 46.8,
+    "2024": 20.3
+   }
+  },
+  "test": {
+   "cagr": 5.5,
+   "dd": -18.7,
+   "sharpe": 0.37,
+   "trades": 0,
+   "win": null,
+   "avg": null,
+   "years": {
+    "2025": 3.5,
+    "2026": 5.8
+   }
+  },
+  "full": {
+   "cagr": 18.1,
+   "dd": -24.0,
+   "sharpe": 1.08,
+   "trades": 0,
+   "win": null,
+   "avg": null,
+   "years": {
+    "2022": 2.7,
+    "2023": 46.8,
+    "2024": 20.3,
+    "2025": 3.5,
+    "2026": 5.8
+   }
+  }
+ },
+ "grid": {
+  "target": [
+   null,
+   0.08,
+   0.1,
+   0.15,
+   0.2
+  ],
+  "stop": [
+   0.05,
+   0.08,
+   0.1
+  ],
+  "days": [
+   10,
+   20,
+   30
+  ],
+  "maxpos": [
+   5,
+   10
+  ]
+ },
+ "ideas": {
+  "Pullback in an uptrend: dips to the 20-day average, then closes above yesterday's high": {
+   "signals": 19571,
+   "target": 0.2,
+   "stop": 0.05,
+   "days": 30,
+   "maxpos": 5,
+   "train": {
+    "cagr": 27.1,
+    "dd": -30.8,
+    "sharpe": 1.05
+   },
+   "test": {
+    "cagr": -21.5,
+    "dd": -50.0,
+    "sharpe": -0.83,
+    "trades": 207,
+    "win": 26.1,
+    "avg": -1.1,
+    "why": {
+     "stop": 71.0,
+     "time": 18.0,
+     "target": 11.0
+    }
+   },
+   "test_top10_median": -9.8,
+   "test_top10_range": [
+    -21.5,
+    6.2
+   ]
+  },
+  "Pullback in a momentum leader (top 50): dips to the 20-day average, then bounces": {
+   "signals": 5277,
+   "target": 0.15,
+   "stop": 0.08,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 23.5,
+    "dd": -21.9,
+    "sharpe": 1.13
+   },
+   "test": {
+    "cagr": 6.0,
+    "dd": -24.9,
+    "sharpe": 0.39,
+    "trades": 282,
+    "win": 42.6,
+    "avg": 0.46,
+    "why": {
+     "stop": 47.0,
+     "target": 28.0,
+     "time": 25.0
+    }
+   },
+   "test_top10_median": 9.4,
+   "test_top10_range": [
+    -4.4,
+    23.7
+   ]
+  },
+  "Base breakout: 30-day range under 15%, closes above it on 1.5x volume, above 200-day": {
+   "signals": 2156,
+   "target": 0.2,
+   "stop": 0.08,
+   "days": 20,
+   "maxpos": 5,
+   "train": {
+    "cagr": 17.7,
+    "dd": -17.0,
+    "sharpe": 1.08
+   },
+   "test": {
+    "cagr": -6.7,
+    "dd": -28.0,
+    "sharpe": -0.34,
+    "trades": 128,
+    "win": 44.5,
+    "avg": -0.51,
+    "why": {
+     "time": 62.0,
+     "stop": 34.0,
+     "target": 4.0
+    }
+   },
+   "test_top10_median": -8.6,
+   "test_top10_range": [
+    -16.9,
+    -3.1
+   ]
+  },
+  "Base breakout in a momentum leader (top 100)": {
+   "signals": 666,
+   "target": null,
+   "stop": 0.05,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 12.7,
+    "dd": -15.0,
+    "sharpe": 1.05
+   },
+   "test": {
+    "cagr": -6.3,
+    "dd": -14.8,
+    "sharpe": -0.58,
+    "trades": 156,
+    "win": 30.8,
+    "avg": -0.89,
+    "why": {
+     "stop": 63.0,
+     "time": 37.0
+    }
+   },
+   "test_top10_median": -8.55,
+   "test_top10_range": [
+    -11.6,
+    -4.7
+   ]
+  },
+  "First new 52-week high in a month, on above-average volume": {
+   "signals": 1664,
+   "target": 0.2,
+   "stop": 0.08,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 22.3,
+    "dd": -21.4,
+    "sharpe": 1.08
+   },
+   "test": {
+    "cagr": 1.4,
+    "dd": -19.2,
+    "sharpe": 0.17,
+    "trades": 204,
+    "win": 43.6,
+    "avg": 0.03,
+    "why": {
+     "stop": 47.0,
+     "time": 39.0,
+     "target": 14.0
+    }
+   },
+   "test_top10_median": -0.7,
+   "test_top10_range": [
+    -5.1,
+    26.2
+   ]
+  },
+  "Near the 52-week high (within 5%), strongest 3-month gain, newly in top 30": {
+   "signals": 1613,
+   "target": 0.15,
+   "stop": 0.1,
+   "days": 30,
+   "maxpos": 5,
+   "train": {
+    "cagr": 42.9,
+    "dd": -31.4,
+    "sharpe": 1.41
+   },
+   "test": {
+    "cagr": 16.0,
+    "dd": -20.0,
+    "sharpe": 0.79,
+    "trades": 123,
+    "win": 50.4,
+    "avg": 1.31,
+    "why": {
+     "stop": 38.0,
+     "target": 33.0,
+     "time": 29.0
+    }
+   },
+   "test_top10_median": 17.15,
+   "test_top10_range": [
+    0.2,
+    25.7
+   ]
+  },
+  "3-month momentum: newly in the top 30": {
+   "signals": 1186,
+   "target": 0.2,
+   "stop": 0.1,
+   "days": 30,
+   "maxpos": 5,
+   "train": {
+    "cagr": 32.5,
+    "dd": -25.2,
+    "sharpe": 1.15
+   },
+   "test": {
+    "cagr": 2.5,
+    "dd": -20.3,
+    "sharpe": 0.22,
+    "trades": 106,
+    "win": 46.2,
+    "avg": 0.49,
+    "why": {
+     "time": 49.0,
+     "stop": 39.0,
+     "target": 12.0
+    }
+   },
+   "test_top10_median": 8.7,
+   "test_top10_range": [
+    -1.9,
+    29.9
+   ]
+  },
+  "6-month momentum: newly in the top 30": {
+   "signals": 902,
+   "target": null,
+   "stop": 0.05,
+   "days": 20,
+   "maxpos": 5,
+   "train": {
+    "cagr": 41.6,
+    "dd": -26.6,
+    "sharpe": 1.53
+   },
+   "test": {
+    "cagr": 5.9,
+    "dd": -23.1,
+    "sharpe": 0.39,
+    "trades": 178,
+    "win": 33.1,
+    "avg": 0.24,
+    "why": {
+     "stop": 62.0,
+     "time": 38.0
+    }
+   },
+   "test_top10_median": 1.3,
+   "test_top10_range": [
+    -7.5,
+    22.2
+   ]
+  },
+  "12-month momentum: newly in the top 50 (this site's rule)": {
+   "signals": 941,
+   "target": 0.2,
+   "stop": 0.08,
+   "days": 30,
+   "maxpos": 5,
+   "train": {
+    "cagr": 40.6,
+    "dd": -23.6,
+    "sharpe": 1.66
+   },
+   "test": {
+    "cagr": 24.0,
+    "dd": -16.5,
+    "sharpe": 1.05,
+    "trades": 117,
+    "win": 45.3,
+    "avg": 1.79,
+    "why": {
+     "stop": 41.0,
+     "time": 39.0,
+     "target": 20.0
+    }
+   },
+   "test_top10_median": 15.6,
+   "test_top10_range": [
+    -2.1,
+    24.0
+   ]
+  },
+  "12-month momentum: newly in the top 30": {
+   "signals": 708,
+   "target": 0.2,
+   "stop": 0.1,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 28.5,
+    "dd": -26.9,
+    "sharpe": 1.42
+   },
+   "test": {
+    "cagr": 20.2,
+    "dd": -17.8,
+    "sharpe": 1.11,
+    "trades": 190,
+    "win": 47.4,
+    "avg": 1.97,
+    "why": {
+     "time": 50.0,
+     "stop": 29.0,
+     "target": 21.0
+    }
+   },
+   "test_top10_median": 13.75,
+   "test_top10_range": [
+    6.1,
+    22.2
+   ]
+  },
+  "Beating the market by the most over 3 months, above 50-day, newly in the top 20": {
+   "signals": 983,
+   "target": 0.2,
+   "stop": 0.05,
+   "days": 20,
+   "maxpos": 5,
+   "train": {
+    "cagr": 54.8,
+    "dd": -25.3,
+    "sharpe": 1.72
+   },
+   "test": {
+    "cagr": -19.1,
+    "dd": -39.6,
+    "sharpe": -0.85,
+    "trades": 213,
+    "win": 29.6,
+    "avg": -0.82,
+    "why": {
+     "stop": 66.0,
+     "time": 26.0,
+     "target": 8.0
+    }
+   },
+   "test_top10_median": -2.75,
+   "test_top10_range": [
+    -19.1,
+    11.3
+   ]
+  },
+  "Narrow-range day (NR7) in an uptrend, then a close above its high": {
+   "signals": 6170,
+   "target": null,
+   "stop": 0.1,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 31.1,
+    "dd": -18.6,
+    "sharpe": 1.33
+   },
+   "test": {
+    "cagr": -13.6,
+    "dd": -41.1,
+    "sharpe": -0.62,
+    "trades": 211,
+    "win": 33.6,
+    "avg": -1.53,
+    "why": {
+     "time": 51.0,
+     "stop": 49.0
+    }
+   },
+   "test_top10_median": -15.15,
+   "test_top10_range": [
+    -21.0,
+    -11.3
+   ]
+  },
+  "MACD crosses up above zero, above 200-day": {
+   "signals": 4677,
+   "target": 0.15,
+   "stop": 0.1,
+   "days": 20,
+   "maxpos": 5,
+   "train": {
+    "cagr": 30.3,
+    "dd": -25.4,
+    "sharpe": 1.13
+   },
+   "test": {
+    "cagr": 1.9,
+    "dd": -28.8,
+    "sharpe": 0.2,
+    "trades": 161,
+    "win": 47.2,
+    "avg": 0.39,
+    "why": {
+     "time": 47.0,
+     "stop": 30.0,
+     "target": 23.0
+    }
+   },
+   "test_top10_median": -1.5,
+   "test_top10_range": [
+    -17.2,
+    5.8
+   ]
+  },
+  "Bollinger squeeze breakout: tightest bands in 6 months, close above the upper band": {
+   "signals": 1041,
+   "target": 0.2,
+   "stop": 0.1,
+   "days": 30,
+   "maxpos": 5,
+   "train": {
+    "cagr": 7.8,
+    "dd": -23.4,
+    "sharpe": 0.47
+   },
+   "test": {
+    "cagr": -18.8,
+    "dd": -38.3,
+    "sharpe": -1.06,
+    "trades": 93,
+    "win": 33.3,
+    "avg": -2.05,
+    "why": {
+     "stop": 52.0,
+     "time": 38.0,
+     "target": 11.0
+    }
+   },
+   "test_top10_median": -18.65,
+   "test_top10_range": [
+    -22.4,
+    -14.7
+   ]
+  },
+  "Golden cross: 50-day crosses above 200-day": {
+   "signals": 730,
+   "target": null,
+   "stop": 0.08,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 18.2,
+    "dd": -11.9,
+    "sharpe": 1.28
+   },
+   "test": {
+    "cagr": -0.4,
+    "dd": -18.3,
+    "sharpe": 0.05,
+    "trades": 161,
+    "win": 40.4,
+    "avg": 0.05,
+    "why": {
+     "time": 55.0,
+     "stop": 45.0
+    }
+   },
+   "test_top10_median": -3.75,
+   "test_top10_range": [
+    -7.1,
+    7.2
+   ]
+  },
+  "Strongest sectors: top-3 sectors by 3-month return, stock newly in its top 30 by 3-month gain": {
+   "signals": 976,
+   "target": 0.2,
+   "stop": 0.1,
+   "days": 20,
+   "maxpos": 10,
+   "train": {
+    "cagr": 32.0,
+    "dd": -13.7,
+    "sharpe": 1.6
+   },
+   "test": {
+    "cagr": -2.4,
+    "dd": -19.0,
+    "sharpe": -0.04,
+    "trades": 228,
+    "win": 46.9,
+    "avg": -0.02,
+    "why": {
+     "time": 54.0,
+     "stop": 35.0,
+     "target": 12.0
+    }
+   },
+   "test_top10_median": -5.65,
+   "test_top10_range": [
+    -9.1,
+    15.2
+   ]
+  },
+  "Gap up 3%+ on 2x volume that holds into the close, above 200-day": {
+   "signals": 227,
+   "target": null,
+   "stop": 0.1,
+   "days": 30,
+   "maxpos": 5,
+   "train": {
+    "cagr": 20.3,
+    "dd": -11.9,
+    "sharpe": 1.18
+   },
+   "test": {
+    "cagr": -2.7,
+    "dd": -18.2,
+    "sharpe": -0.09,
+    "trades": 55,
+    "win": 36.4,
+    "avg": -1.19,
+    "why": {
+     "time": 55.0,
+     "stop": 45.0
+    }
+   },
+   "test_top10_median": 2.9,
+   "test_top10_range": [
+    -4.1,
+    6.5
+   ]
+  },
+  "Delivery-backed rise: delivery % 1.5x normal, up 3%+, in an uptrend": {
+   "signals": 101,
+   "target": 0.2,
+   "stop": 0.05,
+   "days": 30,
+   "maxpos": 10,
+   "train": {
+    "cagr": 2.4,
+    "dd": -7.9,
+    "sharpe": 0.44
+   },
+   "test": {
+    "cagr": 2.0,
+    "dd": -7.1,
+    "sharpe": 0.58,
+    "trades": 23,
+    "win": 30.4,
+    "avg": 1.66,
+    "why": {
+     "stop": 65.0,
+     "target": 26.0,
+     "time": 9.0
+    }
+   },
+   "test_top10_median": 1.7,
+   "test_top10_range": [
+    -0.8,
+    4.7
+   ]
+  }
+ }
+}

@@ -3,256 +3,150 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NSE Stock Agent</title>
-<meta name="description" content="Ranks NSE stocks every trading day on momentum, trend, fundamentals, seasonality, news and swing setups, and explains each pick in plain words.">
+<title>NSE Stock Agent: tonight's trades</title>
+<meta name="description" content="Each evening: which NSE stocks to buy at the next open, with the target, stop-loss and sell-by date for a Zerodha GTT order. One tested rule, updated automatically.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:light;
-  --page:#f3f4f7; --surface:#ffffff; --sunk:#eceef3; --ink:#161b36; --ink2:#4b5270; --muted:#7a809a; --line:#e2e5ed; --line2:#cdd1dd;
-  --brand:#3441a8; --brand-soft:#e7e9f8; --mari:#f0a500; --mari-ink:#7a5200;
-  --gain:#12804a; --loss:#c33a2f; --warn-bg:#fdf3dc; --warn-ink:#7a5200; --bad-bg:#fbe7e4; --good-bg:#e2f3e9;
-  --f1:#2a78d6; --f2:#eb6834; --f3:#1baf7a; --f4:#eda100; --f5:#e87ba4; --f6:#6250d6;
-  --pos:#2a78d6; --neg:#e34948; --grid:#e6e8ef;
+  --page:#f3f4f7; --surface:#fff; --sunk:#eceef3; --ink:#161b36; --ink2:#4b5270; --muted:#737993; --line:#e2e5ed; --line2:#cdd1dd;
+  --brand:#3441a8; --brand-soft:#e7e9f8; --mari:#f0a500; --mari-soft:#fdf3dc; --mari-ink:#7a5200;
+  --gain:#12804a; --gain-soft:#e2f3e9; --loss:#c33a2f; --loss-soft:#fbe7e4;
+  --s1:#2a78d6; --s2:#9aa0b8; --grid:#e6e8ef;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif; --body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --shadow:0 18px 50px rgba(22,27,54,.18);
 }
-@media (prefers-color-scheme: dark){ :root:where(:not([data-theme="light"])){
-  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8a90aa; --line:#272d4a; --line2:#363d60;
-  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-ink:#f5c45a;
-  --gain:#3fc67a; --loss:#f07a6e; --warn-bg:#3a2f12; --warn-ink:#f5c45a; --bad-bg:#3d1d1c; --good-bg:#15301f;
-  --f1:#3987e5; --f2:#d95926; --f3:#199e70; --f4:#c98500; --f5:#d55181; --f6:#9085e9; --pos:#3987e5; --neg:#e66767; --grid:#262c48; --shadow:0 18px 50px rgba(0,0,0,.5);}}
+@media (prefers-color-scheme: dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8e94ad; --line:#272d4a; --line2:#363d60;
+  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-soft:#3a2f12; --mari-ink:#f5c45a;
+  --gain:#3fc67a; --gain-soft:#15301f; --loss:#f07a6e; --loss-soft:#3d1d1c; --s1:#3987e5; --s2:#6d7392; --grid:#262c48;}}
 :root[data-theme="dark"]{
-  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8a90aa; --line:#272d4a; --line2:#363d60;
-  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-ink:#f5c45a;
-  --gain:#3fc67a; --loss:#f07a6e; --warn-bg:#3a2f12; --warn-ink:#f5c45a; --bad-bg:#3d1d1c; --good-bg:#15301f;
-  --f1:#3987e5; --f2:#d95926; --f3:#199e70; --f4:#c98500; --f5:#d55181; --f6:#9085e9; --pos:#3987e5; --neg:#e66767; --grid:#262c48; --shadow:0 18px 50px rgba(0,0,0,.5);}
+  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8e94ad; --line:#272d4a; --line2:#363d60;
+  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-soft:#3a2f12; --mari-ink:#f5c45a;
+  --gain:#3fc67a; --gain-soft:#15301f; --loss:#f07a6e; --loss-soft:#3d1d1c; --s1:#3987e5; --s2:#6d7392; --grid:#262c48;}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--page);color:var(--ink);font:15px/1.5 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--page);color:var(--ink);font:16px/1.55 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 a{color:var(--brand)}
-button{font:inherit;color:inherit}
+button,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
-.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:clamp(30px,4.4vw,48px);line-height:1.04;font-weight:800}
-h2{font-size:26px;line-height:1.15;font-weight:700}
-h3{font-size:17px;line-height:1.3;font-weight:700}
+.wrap{max-width:780px;margin:0 auto;padding:0 20px 40px}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.015em;text-wrap:balance}
 p{margin:0}
-.muted{color:var(--muted)} .ink2{color:var(--ink2)}
-.up{color:var(--gain)} .down{color:var(--loss)}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)} .up{color:var(--gain)} .down{color:var(--loss)}
 
-/* top bar */
-.top{display:flex;align-items:center;gap:16px;padding:18px 0}
-.mark{font:800 19px/1 var(--display);display:flex;align-items:center;gap:10px;letter-spacing:-.02em}
-.mark svg{width:26px;height:26px}
-.top .asof{margin-left:auto;color:var(--muted);font-size:13px;text-align:right}
-.iconbtn{border:1px solid var(--line2);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer}
-.iconbtn:hover{background:var(--brand-soft)}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 6px}
+.mark{font:800 18px/1 var(--display);display:flex;align-items:center;gap:9px}
+.mark svg{width:24px;height:24px}
+.top .asof{margin-left:auto;color:var(--muted);font-size:13px;text-align:right;line-height:1.35}
+.iconbtn{border:1px solid var(--line2);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;flex:none}
 
-/* hero */
-.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px 40px;padding:28px 0 22px;align-items:end}
-.hero p.lede{margin-top:14px;color:var(--ink2);font-size:17px;max-width:56ch}
-.mood{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center}
-.mood .tag{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;padding:4px 10px;border-radius:999px}
-.mood .tag.calm{background:var(--good-bg);color:var(--gain)} .mood .tag.care{background:var(--warn-bg);color:var(--warn-ink)}
-.mood p{grid-column:1/-1;color:var(--ink2);font-size:14px}
-.mood svg.bsp{width:150px;height:46px}
-.mood .tag svg{width:14px;height:14px;flex:none}
-.mood .lg{grid-column:1/-1;display:flex;gap:14px;font-size:12px;color:var(--muted)}
-.lg i{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.hero{padding:30px 0 8px}
+.hero .date{font:600 15px var(--body);color:var(--muted)}
+.hero h1{font-size:clamp(40px,8vw,64px);line-height:.98;font-weight:800;margin-top:4px}
+.hero h1 .n{color:var(--brand)}
+.hero p{margin-top:14px;color:var(--ink2);font-size:17px;max-width:60ch}
+.slots{display:flex;gap:6px;margin-top:18px;align-items:center;flex-wrap:wrap}
+.slots i{width:30px;height:10px;border-radius:5px;background:var(--line2)}
+.slots i.on{background:var(--ink)} .slots i.free{background:transparent;border:2px dashed var(--line2)}
+.slots span{font-size:13.5px;color:var(--ink2);margin-left:6px}
 
-/* style picker */
-.styles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 6px}
-.style{border:1.5px solid var(--line2);background:var(--surface);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px}
-.style b{font:700 16px/1.2 var(--display)}
-.style span{font-size:13px;color:var(--ink2);line-height:1.35}
-.style span.bt{font-size:12px;color:var(--muted);margin-top:2px}
-.style:hover{border-color:var(--brand)}
-.style[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);box-shadow:inset 0 0 0 1px var(--brand)}
-.toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px;font-size:14px;color:var(--ink2)}
-.seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;padding:2px;background:var(--surface)}
-.seg button{border:0;background:transparent;padding:5px 12px;border-radius:999px;cursor:pointer;font-size:13.5px;color:var(--ink2)}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
-select{max-width:230px}
-select,input[type=search],input[type=number]{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink)}
-.linkbtn{border:0;background:none;color:var(--brand);cursor:pointer;padding:0;font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
-.weights{display:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 20px}
-.weights.open{display:grid}
-.weights label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink2)}
-.weights label b{display:flex;align-items:center;gap:7px;color:var(--ink);font-weight:600}
-.weights input[type=range]{width:100%;accent-color:var(--brand)}
-.sw{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+section{margin-top:40px}
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.sh h2{font-size:24px;font-weight:700}
+.sh p{font-size:14px;color:var(--muted)}
 
-/* picks */
-.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink2);margin:4px 0 10px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.picks{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.pick{display:grid;grid-template-columns:74px minmax(0,1.5fr) minmax(0,1.15fr) 92px 130px;gap:4px 22px;align-items:center;padding:16px 22px 16px 14px;border-top:1px solid var(--line);cursor:pointer;position:relative}
-.pick:first-child{border-top:0}
-.pick:hover{background:var(--sunk)}
-.pick .rk{font:800 52px/0.9 var(--display);color:var(--line2);text-align:right;letter-spacing:-.04em}
-.pick:nth-child(-n+3) .rk{color:var(--ink)}
-.pick .nm{font:700 19px/1.2 var(--display);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.pick .nm small{font:500 12.5px var(--body);color:var(--muted)}
-.pick .why{font-size:13.5px;color:var(--ink2);margin-top:4px;line-height:1.4}
-.pick .why .c{color:var(--warn-ink)}
-.strip{display:flex;gap:2px;height:12px;border-radius:4px;background:var(--sunk);overflow:hidden}
-.strip i{display:block;height:100%}
-.strip i:first-child{border-radius:4px 0 0 4px}
-.stripcap{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:5px}
-.score{text-align:right}
-.score b{font:800 34px/1 var(--display);display:block;letter-spacing:-.03em}
-.score span{font-size:12px;font-weight:600;display:block}
-.waitchip{white-space:nowrap;margin-top:4px;font-size:11px!important;color:var(--warn-ink);background:var(--warn-bg);border-radius:999px;padding:1px 7px;display:inline-block!important}
-.caution{background:var(--warn-bg);color:var(--ink);border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
-.caution b{color:var(--warn-ink)}
-.changes{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.changes>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--ink2)}.changes b{color:var(--ink)}
-@media (max-width:700px){.changes{grid-template-columns:1fr}}
-.closedbox{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 16px}.closedbox summary{font-weight:600;color:var(--ink);cursor:pointer}
-.rulebox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:1.3fr 1fr;gap:10px 28px;font-size:14px;color:var(--ink2)}
-.rulebox ol{margin:6px 0 0;padding-left:20px}.rulebox li{margin:4px 0}.rulebox b{color:var(--ink)}
-.rulebox .next{font:800 30px/1.1 var(--display);color:var(--ink);letter-spacing:-.02em}
-.stat{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:8px}.stat b{text-align:right}
-.gtt{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:end;margin-top:8px;font-size:13px;color:var(--ink2)}.gtt label{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--muted)}.gtt input{width:120px;padding:5px 8px}
-.money{margin:4px 0 10px}.money input{width:160px}
-.range{position:relative;height:6px;border-radius:3px;margin-top:10px;background:linear-gradient(90deg,var(--bad-bg),var(--sunk) 33%,var(--good-bg))}.range i{position:absolute;top:50%;transform:translate(-50%,-50%);border-radius:50%}.range .bz{width:2px;height:12px;border-radius:1px;background:var(--line2)}.range .nw{width:12px;height:12px;background:var(--ink);border:2px solid var(--surface)}
-.rangecap{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
-.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunk);color:var(--ink2);margin-top:6px}
-.tag.trade{background:var(--good-bg);color:var(--gain)}.tag.new{background:var(--brand-soft);color:var(--brand)}.tag.out{background:var(--bad-bg);color:var(--loss)}
-@media (max-width:820px){.rulebox{grid-template-columns:1fr}}
-.tradeinfo{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 12px;font-size:14px;color:var(--ink2)}
-.tradeinfo ul{margin:6px 0 8px;padding-left:18px}.tradeinfo li{margin:3px 0}.tradeinfo b{color:var(--ink)}
-.tplan{display:grid;grid-template-columns:repeat(4,auto);gap:4px 16px;font-size:14px}.tplan small{display:block;font-size:11.5px;color:var(--muted)}.tplan b{font-weight:600;white-space:nowrap}
-@media (max-width:600px){.tplan{grid-template-columns:repeat(2,auto)}}
-.v-strong{color:var(--gain)} .v-good{color:var(--brand)} .v-watch{color:var(--warn-ink)} .v-avoid{color:var(--loss)}
-.px{text-align:right;font-size:14px}
-.px b{font-weight:600;display:block}
-.px svg{width:120px;height:30px;display:block;margin-left:auto;margin-top:4px}
-.more{display:flex;justify-content:center;padding:14px;border-top:1px solid var(--line)}
-.btn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);cursor:pointer}
-.btn:hover{background:var(--brand-soft);border-color:var(--brand)}
-.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.empty{padding:36px;text-align:center;color:var(--ink2)}
+/* the buy ticket: the one bold thing on the page */
+.ticket{background:var(--surface);border-radius:18px;border:1px solid var(--line);overflow:hidden;margin-bottom:14px}
+.ticket .head{padding:18px 20px 14px;display:flex;gap:14px;align-items:flex-start}
+.ticket .head .who{flex:1;min-width:0}
+.ticket .nm{font:700 22px/1.15 var(--display)}
+.ticket .sym{font-size:13px;color:var(--muted);margin-top:3px}
+.ticket .why{font-size:14.5px;color:var(--ink2);margin-top:8px}
+.ticket .why .w{color:var(--mari-ink)}
+.spark{flex:none;text-align:right;font-size:13px;color:var(--muted)}
+.spark b{display:block;font-size:17px;color:var(--ink)}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.levels>div{padding:12px 16px 14px;border-left:1px solid var(--line)}
+.levels>div:first-child{border-left:0}
+.levels small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.levels b{display:block;font:700 21px/1.2 var(--display);margin-top:2px;white-space:nowrap}
+.levels .t{background:var(--gain-soft)} .levels .t b{color:var(--gain)}
+.levels .s{background:var(--loss-soft)} .levels .s b{color:var(--loss)}
+.levels em{font-style:normal;font-size:12px;color:var(--muted)}
+.ticket details{border-top:1px solid var(--line)}
+.ticket summary{padding:11px 20px;cursor:pointer;font-size:14px;font-weight:600;color:var(--brand);list-style:none}
+.ticket summary::-webkit-details-marker{display:none}
+.ticket summary::before{content:"+ ";font-weight:700}
+.ticket details[open] summary::before{content:"− "}
+.ticket .more{padding:0 20px 16px;font-size:14.5px;color:var(--ink2)}
+.calc{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;margin-bottom:10px}
+.calc label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted);font-weight:600}
+.calc input{width:150px;padding:8px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--page)}
+.calc output{flex-basis:100%;background:var(--sunk);border-radius:10px;padding:10px 12px;color:var(--ink);font-size:14.5px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 16px;margin-top:6px}
+.kv b{text-align:right;font-weight:600;color:var(--ink)}
+.links{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:14px}
+.news{margin-top:4px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--sunk);color:var(--ink2);margin-right:6px}
+.pill.pos{background:var(--gain-soft);color:var(--gain)} .pill.neg{background:var(--loss-soft);color:var(--loss)} .pill.mix{background:var(--mari-soft);color:var(--mari-ink)}
 
-section{padding:44px 0 8px}
-.sechead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;margin-bottom:14px}
-.sechead p{color:var(--ink2);max-width:70ch}
+.empty{background:var(--surface);border:1px dashed var(--line2);border-radius:18px;padding:22px 20px;color:var(--ink2)}
+.empty b{display:block;font:700 20px var(--display);color:var(--ink);margin-bottom:4px}
 
-/* steps */
-.steps{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:2px solid var(--ink)}
-.steps li{padding:16px 22px 4px 0;display:grid;grid-template-columns:44px 1fr;gap:0 8px}
-.steps .n{font:800 34px/1 var(--display);color:var(--mari)}
-.steps p{color:var(--ink2);font-size:14px;margin-top:4px}
+/* open trades: quiet rows */
+.rows{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:4px 16px;padding:14px 18px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .nm{font:700 17px/1.2 var(--display)}
+.row .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.row .pl{text-align:right;font:700 20px/1.2 var(--display)}
+.row .pl small{display:block;font:500 12px var(--body);color:var(--muted)}
+.row .bar{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:12.5px;color:var(--muted);margin-top:4px}
+.track{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--loss-soft),var(--sunk) 40%,var(--gain-soft))}
+.track i{position:absolute;top:50%;transform:translate(-50%,-50%);border-radius:50%}
+.track .b0{width:2px;height:12px;border-radius:1px;background:var(--line2)}
+.track .nw{width:13px;height:13px;background:var(--ink);border:2px solid var(--surface)}
+.flag{grid-column:1/-1;font-size:13.5px;font-weight:600;color:var(--loss);background:var(--loss-soft);border-radius:8px;padding:6px 10px;margin-top:6px}
+.flag.ok{color:var(--gain);background:var(--gain-soft)}
 
-/* table */
-.tbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:auto;max-height:720px}
-table{border-collapse:collapse;width:100%;min-width:980px;font-size:14px}
-th,td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
-th{position:sticky;top:0;background:var(--surface);font-weight:600;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none;z-index:1}
-th:hover,th.on{color:var(--ink)}
-th.l,td.l{text-align:left}
-tbody tr{cursor:pointer} tbody tr:hover{background:var(--sunk)}
-td .s{font-weight:700} td .n2{display:block;font-size:12px;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.mini{display:inline-block;width:38px;height:6px;border-radius:3px;background:var(--sunk);vertical-align:middle;margin-left:6px;overflow:hidden}
-.mini i{display:block;height:100%}
-.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--ink2)}
-.pill.pos{background:var(--good-bg);color:var(--gain)} .pill.mix{background:var(--warn-bg);color:var(--warn-ink)} .pill.neg{background:var(--bad-bg);color:var(--loss)}
-
-/* evidence */
-.ev{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--line)}
-.ev>div{padding:16px 20px 16px 0;border-bottom:1px solid var(--line)}
-.ev h3{display:flex;align-items:center;gap:8px}
-.ev p{font-size:14px;color:var(--ink2);margin-top:6px}
-.grade{font:600 12px var(--body);padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap}
-.g-strong{background:var(--good-bg);color:var(--gain)} .g-some{background:var(--brand-soft);color:var(--brand)} .g-weak{background:var(--warn-bg);color:var(--warn-ink)} .g-none{background:var(--sunk);color:var(--ink2)}
-.chartbox{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 6px;margin-top:18px}
-.chartbox svg{display:block;width:100%;height:auto}
-svg text{font:11px var(--body);fill:var(--muted)}
-.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:7px 10px;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.14);display:none;white-space:nowrap;z-index:5}
-.bt{width:100%;min-width:640px;border-collapse:collapse;font-size:13.5px;margin-top:10px}
-.bt th{position:static;cursor:default;background:none}
-.bt td:first-child,.bt th:first-child{text-align:left;white-space:normal;min-width:240px}
-details{margin-top:14px} summary{cursor:pointer;font-weight:600;color:var(--brand)}
-.foot{padding:40px 0 56px;color:var(--muted);font-size:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 32px}
+/* results */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.big3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.big3 div{background:var(--sunk);border-radius:12px;padding:10px 14px}
+.big3 b{display:block;font:800 26px/1.1 var(--display)}
+.big3 span{font-size:13px;color:var(--ink2)}
+.lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--ink2);margin:6px 0 2px}
+.lg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.chart{position:relative}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{font:12px var(--body);fill:var(--muted)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--page);font-size:12.5px;padding:7px 10px;border-radius:8px;display:none;white-space:nowrap;z-index:2}
+details.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-top:10px}
+details.box>summary{padding:13px 18px;cursor:pointer;font-weight:600}
+details.box>div{padding:0 18px 16px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;border-top:0}
+td.r,th.r{text-align:right}
+tr.me td{background:var(--gain-soft)}
+ol.steps{margin:0;padding-left:20px;color:var(--ink2);font-size:15px}
+ol.steps li{margin:0 0 10px;padding-left:4px}
+ol.steps b{color:var(--ink)}
+.note{font-size:14px;color:var(--ink2);margin-top:12px}
+.foot{margin-top:44px;font-size:13px;color:var(--muted);display:grid;gap:8px}
 .foot b{color:var(--ink2)}
 
-/* drawer */
-dialog.drawer{position:fixed;inset:0 0 0 auto;margin:0;height:100%;max-height:100%;width:min(720px,100%);border:0;padding:0;background:var(--page);color:var(--ink);box-shadow:var(--shadow)}
-dialog.drawer::backdrop{background:rgba(15,19,38,.45)}
-dialog.drawer[open]{animation:slide .22s ease-out}
-@keyframes slide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
-@media (prefers-reduced-motion: reduce){dialog.drawer[open]{animation:none}}
-.dhead{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:16px 22px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;z-index:3}
-.dhead h2{font-size:24px}
-.dhead .acts{display:flex;gap:8px;align-items:start}
-.dhead .meta{color:var(--muted);font-size:13px}
-.dhead .pxl{font-size:15px}
-.dbody{padding:18px 22px 40px;display:flex;flex-direction:column;gap:16px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-.card>h3{margin-bottom:10px}
-.verdict{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:center}
-.verdict .big{font:800 64px/0.9 var(--display);letter-spacing:-.04em;grid-row:span 2}
-.verdict .vl{font:700 20px/1.2 var(--display)}
-.verdict p{color:var(--ink2);font-size:14px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:14px}
-.ul li{display:grid;grid-template-columns:18px 1fr;gap:6px;line-height:1.4}
-.ul li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:6px}
-.ul.pro li::before{background:var(--gain)} .ul.con li::before{background:var(--mari)}
-.fbars{display:flex;flex-direction:column;gap:9px}
-.fbar{display:grid;grid-template-columns:120px 1fr 44px 74px;gap:10px;align-items:center;font-size:13.5px}
-.fbar .t{height:10px;background:var(--sunk);border-radius:4px;overflow:hidden}
-.fbar .t i{display:block;height:100%;border-radius:4px}
-.fbar .w{color:var(--muted);font-size:12px;text-align:right}
-.fbar b{text-align:right}
-.kv{display:grid;grid-template-columns:1fr auto;gap:0;font-size:14px}
-.kv>*{padding:7px 0;border-bottom:1px solid var(--line)}
-.kv>*:nth-last-child(-n+2){border-bottom:0}
-.kv span{color:var(--ink2)} .kv b{text-align:right;font-weight:600}
-.calc{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:12px;align-items:end}
-.calc label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)}
-.calc input{width:130px}
-.calc output{flex-basis:100%;font-size:14px;color:var(--ink);background:var(--sunk);border-radius:10px;padding:10px 12px}
-.links{display:flex;flex-wrap:wrap;gap:8px}
-.links a{font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line2);text-decoration:none;background:var(--surface)}
-.links a:hover{background:var(--brand-soft)}
-.note{font-size:13px;color:var(--ink2);background:var(--warn-bg);border-radius:10px;padding:10px 12px}
-
-@media (max-width:980px){
-  .hero{grid-template-columns:1fr}
-  .styles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .pick{grid-template-columns:56px minmax(0,1fr) 84px;gap:8px 14px}
-  .pick .rk{font-size:40px}
-  .pick .fs{grid-column:2/-1;grid-row:2}
-  .pick .px{display:none}
-  .ev{grid-template-columns:1fr 1fr}
-  .steps{grid-template-columns:1fr}
-}
 @media (max-width:600px){
-  .wrap{padding:0 14px}
-  .styles{grid-template-columns:1fr 1fr;gap:8px}
-  .style span{display:none}
-  .pick{grid-template-columns:40px minmax(0,1fr) 64px;padding:14px 14px 14px 6px}
-  .pick .rk{font-size:30px}
-  .pick .nm{font-size:17px}
-  .pick .score b{font-size:21px!important}
-  .score b{font-size:26px}
-  .ev{grid-template-columns:1fr}
-  .two{grid-template-columns:1fr}
-  .fbar{grid-template-columns:96px 1fr 34px;}
-  .fbar .w{display:none}
-  .top .asof span{display:none}
-  .mood{grid-template-columns:1fr}
-  .verdict .big{font-size:52px}
-  .dhead{display:flex;flex-direction:column-reverse;gap:10px;padding:12px 16px}
-  .dhead .acts{justify-content:space-between}
-  .dhead h2{font-size:21px}
-  .dbody{padding:14px 12px 32px}
+  .levels{grid-template-columns:1fr 1fr}
+  .levels>div:nth-child(3){border-left:0}
+  .levels>div:nth-child(n+3){border-top:1px solid var(--line)}
+  .levels b{font-size:19px}
+  .big3{grid-template-columns:1fr}
+  .spark svg{display:none}
+  .sh{flex-direction:column;gap:2px}
 }
 </style>
 </head>
@@ -261,434 +155,179 @@ dialog.drawer[open]{animation:slide .22s ease-out}
   <header class="top">
     <div class="mark"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--ink)"/><path d="M5 18l5-5 4 3 7-8" fill="none" stroke="var(--mari)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE Stock Agent</div>
     <div class="asof" id="asof"></div>
-    <button class="iconbtn" id="theme" type="button" aria-label="Switch light or dark theme"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor"/></svg></button>
+    <button class="iconbtn" id="theme" type="button" aria-label="Switch light or dark theme"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor"/></svg></button>
   </header>
 
   <div class="hero">
-    <div>
-      <h1 id="headline">Buy strong NSE stocks. Sell at +20% or −10%.</h1>
-      <p class="lede">Each evening the agent finds stocks that have just joined the 30 strongest of the 300 most-traded NSE stocks. You buy at the next open, then place one GTT order in Zerodha with a 20% target and a 10% stop, so your broker sells for you the moment either price is hit. Anything still open after 21 trading days, you sell. At most 5 trades at a time.</p>
-    </div>
-    <div class="mood" id="mood" aria-live="polite"></div>
+    <p class="date" id="hdate"></p>
+    <h1 id="headline">Loading tonight's trades</h1>
+    <p id="lede">Each evening the agent picks NSE stocks that have just joined the 50 strongest of the past year. You buy at the next open and place one GTT order in Zerodha: <b>+20% target, −8% stop-loss</b>. Your broker sells automatically when either is hit. Anything still open after 30 trading days, you sell. Up to 5 trades at a time.</p>
+    <div class="slots" id="slots" aria-live="polite"></div>
   </div>
 
-  <div class="caution" id="caution" hidden><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;margin-top:1px"><path d="M12 3l10 18H2z" fill="var(--mari)"/></svg><p><b>The market is cautious.</b> Fewer stocks are in uptrends. In the test, skipping new buys at times like this did worse (<span id="mcg"></span> a year, worst fall <span id="mdd"></span>) than buying anyway (<span id="fcg"></span>, worst fall <span id="fdd"></span>). The rule keeps buying; smaller amounts are the calmer choice.</p></div>
-  <div class="rulebox" id="rulebox"></div>
-  <div class="sechead" style="margin-top:22px"><h2>Buy at tomorrow's open</h2><p id="buynote"></p></div>
-  <div class="calc money"><label>Your trading money ₹<input type="number" id="money" min="0" step="10000" inputmode="numeric"></label><span class="muted" id="moneynote">Each trade gets one fifth.</span></div>
-  <ol class="picks" id="picks"></ol>
-  <div class="sechead" style="margin-top:30px"><h2>Open trades</h2><p id="holdnote"></p></div>
-  <ol class="picks" id="trades"></ol>
-  <div class="changes" id="changes"></div>
-  <details class="closedbox"><summary id="recsum">Closed trades</summary><div style="overflow-x:auto"><table class="bt" id="recent"></table></div></details>
+  <section aria-labelledby="h-buy">
+    <div class="sh"><h2 id="h-buy">Buy at tomorrow's open</h2><p id="buynote"></p></div>
+    <div id="buys"></div>
+  </section>
+
+  <section aria-labelledby="h-sell" id="sellsec" hidden>
+    <div class="sh"><h2 id="h-sell">Sell at tomorrow's open</h2><p>30 trading days are up</p></div>
+    <div class="rows" id="sells"></div>
+  </section>
+
+  <section aria-labelledby="h-open">
+    <div class="sh"><h2 id="h-open">Open trades</h2><p id="opennote"></p></div>
+    <div class="rows" id="open"></div>
+    <p class="note" id="closednote"></p>
+  </section>
 
   <section aria-labelledby="h-how">
-    <div class="sechead"><h2 id="h-how">How to use it</h2></div>
-    <ol class="steps">
-      <li><span class="n">1</span><div><h3>Check tonight's buys</h3><p>The list updates after 8:30 pm IST on trading days; with alerts on, you get it by message. Put one fifth of your trading money into each new buy. If all five slots are full, there is nothing to buy.</p></div></li>
-      <li><span class="n">2</span><div><h3>Buy at the open</h3><p>Next morning, buy at the open. In Kite you can place it the night before as an AMO (after-market order) at market price, which fills at the open.</p></div></li>
-      <li><span class="n">3</span><div><h3>Place one GTT OCO straight away</h3><p>In Kite, open the stock in Holdings, choose Create GTT, then OCO (One Cancels Other). Stop-loss trigger: your buy price −10%, as a market order with protection so it fills. Target trigger: your buy price +20%, as a limit order at that price. Type your buy price into the trade's card here and it gives you both numbers. When one triggers, Zerodha cancels the other.</p></div></li>
-      <li><span class="n">4</span><div><h3>Sell anything left on its sell-by date</h3><p>If neither price is hit within 21 trading days, sell at the open on the sell-by date shown on the card (an AMO the evening before works), then delete its GTT. About 6 in 10 trades end this way.</p></div></li>
-      <li><span class="n">5</span><div><h3>Take every signal, including the losers</h3><p>About half the trades lose money and the worst fall in the test was over a third. The rule works on average across many trades; skipping some or moving the stop breaks it. Only use money you can afford to lose.</p></div></li>
-    </ol>
-  </section>
-
-  <section aria-labelledby="h-all">
-    <div class="sechead"><h2 id="h-all">Every stock</h2><p id="allnote"></p></div>
-    <div class="toolbar" style="margin-top:0"><label class="sr" for="q">Search stocks</label><input type="search" id="q" placeholder="Search name or symbol" autocomplete="off"><span id="cnt" class="muted"></span></div>
-    <div class="tbox"><table id="tbl"><thead></thead><tbody></tbody></table><div class="more" id="tmore" hidden><button type="button" class="btn" id="tmoreBtn">Show 50 more</button></div></div>
-  </section>
-
-  <section aria-labelledby="h-ev">
-    <div class="sechead"><h2 id="h-ev">Can you trust the rule?</h2><p>The rule was chosen by testing about 540 combinations of entry, target, stop and holding time on past NSE prices. Here is what the tests showed.</p></div>
-    <div class="ev" id="ev"></div>
-    <div class="chartbox" id="track"></div>
-    <div class="chartbox"><h3 style="margin-bottom:4px">₹10 lakh traded with this rule against the 300 most-traded stocks</h3><p class="muted" id="btnote" style="font-size:13px"></p><div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink2);margin:8px 0 4px"><span><i style="background:var(--f1)"></i>20% target, 10% stop rule</span><span><i style="background:var(--f3)"></i>300 most-traded stocks, equal weight</span></div><div id="eqc"></div><div class="tip" id="eqtip"></div>
-      <div style="overflow-x:auto"><table class="bt" id="bt0"></table><table class="bt" id="bt1"></table></div>
-      <details><summary>Robustness checks and rules that failed</summary><div style="overflow-x:auto"><table class="bt" id="bt2"></table><table class="bt" id="bt3"></table></div>
-        <p class="muted" style="font-size:13px;margin-top:8px">Stocks that later delisted are included up to their last trading day. Five years includes a strong 2023 bull run, and momentum can fall hard when market leadership changes. Costs are 0.2% per round trip unless stated. Past results do not predict future ones.</p></details>
+    <div class="sh"><h2 id="h-how">How it has done</h2></div>
+    <div class="card">
+      <div class="big3" id="big3"></div>
+      <h3 style="font-size:16px">₹1 lakh traded with this rule, against the 300 most-traded stocks</h3>
+      <div class="lg"><span><i style="background:var(--s1)"></i>This rule</span><span><i style="background:var(--s2)"></i>300 most-traded stocks, equal amounts</span></div>
+      <div class="chart" id="chart"></div>
+      <p class="note" id="chartnote"></p>
     </div>
+    <details class="box"><summary id="livesum">Live record</summary><div id="live"></div></details>
+    <details class="box"><summary id="recsum">Recent closed trades in the test</summary><div id="recent"></div></details>
+  </section>
+
+  <section aria-labelledby="h-use">
+    <div class="sh"><h2 id="h-use">How to follow it</h2></div>
+    <div class="card"><ol class="steps">
+      <li><b>Check this page after 8:30 pm on trading days</b>, or get the list on Telegram (see the repository's README). Put about one fifth of your trading money into each new buy. If all 5 slots are full, there is nothing to buy.</li>
+      <li><b>Buy at the open.</b> In Kite you can place the order the night before as an AMO (after-market order) at market price; it fills at the open.</li>
+      <li><b>Straight after buying, create one GTT.</b> In Kite: Holdings, tap the stock, Create GTT, choose OCO (One Cancels Other). Stop-loss trigger: your buy price −8%, as a market order (with market protection) so it fills. Target trigger: your buy price +20%, as a limit order at that price. Type your real buy price into the ticket above and it works out both numbers.</li>
+      <li><b>If neither hits within 30 trading days</b>, sell at the open on the sell-by date (an AMO the evening before works) and delete the GTT. This page and the alert tell you when.</li>
+      <li><b>Take every signal, including the ones that lose.</b> About half the trades lose money. The rule earns from a few big winners; skipping trades or moving the stop-loss breaks it.</li>
+    </ol></div>
+  </section>
+
+  <section aria-labelledby="h-why">
+    <div class="sh"><h2 id="h-why">Why this rule</h2></div>
+    <div class="card" style="font-size:15px;color:var(--ink2)" id="whytext"></div>
+    <details class="box"><summary>Every idea tested, settings chosen on 2022–24, checked on 2025–26</summary><div id="ideas"></div></details>
   </section>
 
   <footer class="foot">
-    <p><b>Not investment advice.</b> This is a rules-based ranking from public data for education, not a recommendation to buy or sell, and not research by a SEBI-registered analyst. Prices are end-of-day, not live. Check the current price and the company's latest filings before you trade.</p>
-    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. Company numbers: Screener.in public pages for the top-ranked stocks, fetched nightly (Yahoo Finance fills gaps), plus MoneyWorks4Me for the Nifty 50; others count as neutral. News: each night the agent reads the top-ranked stocks' results, stock-exchange announcements and shareholding changes from Screener.in, plus Google News headlines; last run <span id="newsAsof"></span>.</p>
-    <p><b>Limits.</b> Small stocks move fast and can gap past a stop-loss. Seasonality uses at most five years per month. Splits and bonuses are detected from one-day price drops and adjusted; dividends are not.</p>
+    <p><b>Not investment advice.</b> This is a rules-based list from public data, for education. It is not a recommendation to buy or sell, and not research by a SEBI-registered analyst. Prices are end-of-day. About half the trades lose money, and a run of losses can take a quarter or more off your money. Short-term gains on shares are taxed at 20%, which the figures here do not include.</p>
+    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. News and company numbers for the stocks on this page: Screener.in, stock-exchange announcements and Google News, read each night (last run <span id="newsAsof"></span>).</p>
   </footer>
 </div>
 
-<dialog class="drawer" id="drawer" aria-labelledby="dname"></dialog>
-
 <script>
-(async()=>{
+(async function(){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const inr=(x,d=2)=>x==null||!isFinite(x)?'–':x.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
 const pct=(x,d=1)=>x==null||!isFinite(x)?'–':(x>0?'+':x<0?'−':'')+Math.abs(x).toFixed(d)+'%';
 const cls=x=>x>0?'up':x<0?'down':'';
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-
+const dd=t=>new Date(t+'T00:00:00');
+const dlong=t=>dd(t).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+const dshort=t=>dd(t).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+const dfull=x=>x.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const addBiz=(t,k)=>{const x=dd(t);let n=0;while(n<k){x.setDate(x.getDate()+1);const w=x.getDay();if(w&&w<6)n++;}return x;};
+const tick=x=>Math.round(x*20)/20;
 // theme
 const applyTheme=t=>{if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};
 applyTheme(store.get('nsaTheme',null));
-$('#theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;const t=dark?'light':'dark';applyTheme(t);store.set('nsaTheme',t);});
+$('#theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;const t=dark?'light':'dark';store.set('nsaTheme',t);applyTheme(t);});
 
-let D,ST;
-try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json();})));}
-catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
+const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
+const [D,X,AUTO,HIST,IDEAS]=await Promise.all(['data.json','exits_bt.json','auto.json','history.json','ideas_bt.json'].map(get));
+if(!X.live||!D.stocks){$('#headline').textContent='The data did not load';$('#lede').textContent='Reload the page in a minute; the nightly refresh may be updating it.';return;}
+const BY=Object.fromEntries(D.stocks.map(s=>[s.sym,s]));
+const L=X.live,R=X.rule,F=X.stats,B=X.bench,TP=Math.round(R.target*100),SP=Math.round(R.stop*100);
+const nm=sym=>esc((BY[sym]&&BY[sym].name||sym).replace(/ Limited$| Ltd\.?$/i,'').replace(/\bLIMITED\b/,'').trim());
+const title=s=>s.replace(/\w\S*/g,w=>w.length>3&&w===w.toUpperCase()?w[0]+w.slice(1).toLowerCase():w);
+const name=sym=>title(nm(sym));
+const asof=L.asof;
+$('#asof').innerHTML=`Prices from the NSE close<br>${dlong(asof)}`;
+$('#newsAsof').textContent=AUTO.asof||'–';
 
-const opt=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
-const [AUTO,SBT,HIST,TBT,MBT,DBT,ALG,EXT]=await Promise.all([opt('auto.json'),opt('styles_bt.json'),opt('history.json'),opt('trades_bt.json'),opt('mom_bt.json'),opt('daily_bt.json'),opt('algos_bt.json'),opt('exits_bt.json')]);
-const TR={breakout:{name:'Breakout',long:'Broke to a 50-day high on 1.5 times normal volume',bt:'Breakout: 50-day high on 1.5x volume',order:0},
-  momtrend:{name:'Momentum + trend turn',long:'A top-30 momentum stock closed back above its 50-day average',bt:'Momentum top 30 + trend turn above 50-day',order:1},
-  new30:{name:'New momentum leader',long:'Just entered the top 30 for 12-month momentum',bt:'Momentum top 30 (newly entered)',order:2}};
-const TB=(TBT.results||{})['target 20% / stop 10%']||{};
-const trStat=r=>TB[TR[r].bt]||null;
-const addBiz=(d,n)=>{const x=new Date(d+'T00:00:00');let k=0;while(k<n){x.setDate(x.getDate()+1);const w=x.getDay();if(w&&w<6)k++;}return x;};
-const fmtDay=x=>x.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-const S=D.stocks, BT=Object.assign({},ST.bt,D.bt), EV=D.ev||{}, MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const TM=(D.tmon||12)-1, TMN=MONL[TM];
-const MI={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
-const dnum=t=>{const m=String(t||'').trim().match(/^(\d{1,2})?\s*([A-Za-z]{3})[a-z]*\s+(\d{4})$/);return m?(+m[3])*10000+MI[m[2].toLowerCase()]*100+(+(m[1]||1)):0;};
-const dday=t=>{const n=dnum(t);return n?Date.UTC(Math.floor(n/10000),Math.floor(n/100)%100,n%100)/864e5:0;};
-const NEWS=Object.assign({},ST.news||{});for(const [k,v] of Object.entries(AUTO.news||{})){const m=NEWS[k];
-  const seen=v.fetched&&isFinite(Date.parse(v.fetched))?Date.parse(v.fetched)/864e5:dday(v.date);
-  if(m&&!m.auto&&!v.read&&!v.ai&&seen-dday(m.date)<=21)NEWS[k]=Object.assign({},m,{more:v.items||[]});else if(!m||dnum(v.date)>=dnum(m.date)||m.auto)NEWS[k]=v;}
-const BY=Object.fromEntries(S.map(s=>[s.sym,s]));
+// ---------- hero ----------
+const sellT=L.open.filter(o=>o.sellTomorrow),used=L.open.length,free=R.maxpos-used+sellT.length;
+const nb=L.buys.length;
+$('#hdate').textContent=`For ${dfull(addBiz(asof,1))}`;
+$('#headline').innerHTML=nb?`<span class="n">${nb}</span> ${nb===1?'stock':'stocks'} to buy${sellT.length?`, <span class="n">${sellT.length}</span> to sell`:''}`:sellT.length?`<span class="n">${sellT.length}</span> to sell, nothing to buy`:'Nothing to do tomorrow';
+$('#slots').innerHTML=Array.from({length:R.maxpos},(_,i)=>`<i class="${i<used-sellT.length?'on':i<used?'':'free'}"></i>`).join('')+`<span>${used} of ${R.maxpos} trade slots in use${sellT.length?`, ${sellT.length} freeing up tomorrow`:''}</span>`;
 
-// ---------- fundamentals score ----------
-const pr=(arr,v,hi)=>{if(v==null||!isFinite(v)||arr.length<5)return null;let n=0;for(const a of arr){if(hi?a<v:a>v)n++;else if(a===v)n+=.5;}return n/arr.length*100;};
-(function(){const L=S.filter(s=>s.liq300&&s.fMom!=null).sort((a,b)=>a.fMom-b.fMom);L.forEach((s,i)=>{s.fMomAll=s.fMom;s.fMom=Math.round((i+.5)/L.length*1000)/10;});})();
-S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.news=NEWS[s.sym]||null;
-  const man=(D.sc||{})[s.sym]||(ST.sc||{})[s.sym]||null,au=(AUTO.sc||{})[s.sym]||null;
-  s.scSrc=man?`Screener.in, ${(D.sc||{})[s.sym]?D.scAsof:ST.scAsof}`:'';
-  if(au&&(!man||man.np==null||(au.q&&dnum(au.q)>=dnum(man.q))||(!au.q&&au.src==='Screener.in'))){s.sc=Object.assign({},man||{},au);if(!au.q&&man&&man.q){['q','np','npYoY','sales','salesYoY'].forEach(k=>s.sc[k]=man[k]);}s.scSrc=`${au.src||'Yahoo Finance'}, fetched ${au.fetched||''}`;}else s.sc=man;
-  s.filings=au&&au.filings||null;});
-(function(){
-  const fin=s=>s.sector==='Financial Services';
-  const A=(get,filt=()=>true)=>S.map(s=>filt(s)?get(s):null).filter(v=>v!=null&&isFinite(v));
-  const g50={roe:s=>s.f50?.roe,profit5:s=>s.f50?.profit5,sales5:s=>s.f50?.sales5,pe:s=>s.f50?.pe>0?s.f50.pe:null,evebitda:s=>!fin(s)&&s.f50?.evebitda>0?s.f50.evebitda:null,pb:s=>s.f50?.pb>0?s.f50.pb:null};
-  const w50={roe:[30,1],profit5:[20,1],sales5:[15,1],pe:[15,0],evebitda:[12,0],pb:[8,0]};
-  const gsc={roe:s=>s.sc?.roe,roce:s=>s.sc?.roce,pg:s=>s.sc&&s.sc.np!=null&&s.sc.npYoY>0?(s.sc.np/s.sc.npYoY-1)*100:null,sg:s=>s.sc&&s.sc.sales!=null&&s.sc.salesYoY>0?(s.sc.sales/s.sc.salesYoY-1)*100:null,de:s=>fin(s)?null:s.sc?.de,pe:s=>s.sc?.pe>0?s.sc.pe:null};
-  const wsc={roe:[20,1],roce:[15,1],pg:[25,1],sg:[15,1],de:[10,0],pe:[15,0]};
-  const arr50={},arrsc={};for(const k in g50)arr50[k]=A(g50[k]);for(const k in gsc)arrsc[k]=A(gsc[k]);
-  const comb=(s,G,W,AR)=>{let sum=0,w=0,n=0;for(const k in G){const v=G[k](s),p=pr(AR[k],v,W[k][1]);if(p==null)continue;sum+=p*W[k][0];w+=W[k][0];n++;}return n>=3?sum/w:null;};
-  S.forEach(s=>{const a=s.f50?comb(s,g50,w50,arr50):null;let b=s.sc?comb(s,gsc,wsc,arrsc):null;
-    if(b!=null&&s.sc){if(s.sc.pledge>10)b-=15;if(s.sc.pe==null&&s.sc.roe<0)b-=20;b=Math.max(0,b);}
-    const v=[a,b].filter(x=>x!=null);s.fFund=v.length?v.reduce((x,y)=>x+y,0)/v.length:null;
-    s.fNews=s.news?({Positive:85,Neutral:55,Mixed:45,Negative:12}[s.news.tone]??null):null;
-    s.fTrend=s.tscore;});
-})();
-
-// ---------- styles & scoring ----------
-const F=[{k:'mom',f:'fMom',name:'Momentum',c:'var(--f1)'},{k:'trend',f:'fTrend',name:'Trend',c:'var(--f2)'},{k:'fund',f:'fFund',name:'Company results',c:'var(--f3)'},{k:'seas',f:'fSeas',name:'Seasonality',c:'var(--f4)'},{k:'news',f:'fNews',name:'News',c:'var(--f5)'},{k:'swing',f:'fSwing',name:'Swing setup',c:'var(--f6)'}];
-const STY={
-  momentum:{name:'Momentum',bt:'Momentum 30 (the tested model)',desc:'The tested model: strongest stocks, review monthly',gate:false,w:{mom:100,trend:0,fund:0,seas:0,news:0,swing:0}},
-  balanced:{name:'Balanced',bt:'Balanced',desc:'Momentum with a little trend, seasonality and quality',gate:true,w:{mom:70,trend:10,fund:5,seas:10,news:5,swing:0}},
-  swing:{name:'Swing trade',bt:'Swing trade',desc:'Up to 40 days: 20% target, 10% stop',gate:false,trade:true,w:{mom:100,trend:0,fund:0,seas:0,news:0,swing:0}},
-  longterm:{name:'Long-term',bt:null,desc:'Momentum plus company results and news',gate:true,w:{mom:60,trend:0,fund:30,seas:0,news:10,swing:0}}};
-const btOf=k=>{if(STY[k].trade){const b=trStat('breakout');return b?`Tested: ${pct(b.avg)} a trade, wins ${Math.round(b.win)}%`:'Tested on 5 years of trades';}const b=SBT.styles&&STY[k].bt&&SBT.styles[STY[k].bt];return b?`Tested: ${b.cagr}% a year, worst fall ${b.dd}%`:'Not testable: needs company history';};
-let st={style:'momentum',uni:'liq',sector:'',q:'',sort:'score',dir:-1,lim:10,tlim:50,custom:null};
-if(!STY[st.style])st.style='momentum';
-let WATCH=new Set(store.get('nsaWatch',[]));
-const W=()=>st.custom||STY[st.style].w;
-function valPen(s){return [0,''];}
-function valPenOld(s){const pe=s.sc?.pe??s.f50?.pe;if(s.sc&&s.sc.np!=null&&s.sc.np<0)return [10,'loss-making'];if(pe==null||!isFinite(pe))return [0,''];if(pe>200)return [10,`P/E ${Math.round(pe)}`];if(pe>100)return [5,`P/E ${Math.round(pe)}`];return [0,''];}
-function score(s){const w=W();let sum=0,tw=0;const parts={};for(const f of F){const wt=w[f.k]||0;if(!wt)continue;const v=s[f.f];const val=v==null||!isFinite(v)?50:v;parts[f.k]={v:val,missing:v==null,w:wt};sum+=val*wt;tw+=wt;}
-  const [pen,why]=valPen(s);s.pen=pen;s.penWhy=why;s.score=Math.max(0,(tw?sum/tw:0)-pen);s.parts=parts;s.tw=tw;return s.score;}
-const gated=()=>st.custom?true:STY[st.style].gate;
-const verdict=s=>(gated()&&s.close<s.s200)?['Downtrend','avoid']:s.score>=75?['High score','strong']:s.score>=63?['Above average','good']:s.score>=50?['Average','watch']:['Low score','avoid'];
-
-// ---------- reasons ----------
-function seasLine(s){const z=s.seas;if(!z||z.n[TM]<4||z.avg[TM]==null)return null;return {avg:z.avg[TM],up:z.up[TM],n:z.n[TM]};}
-function pros(s){const r=[];
-  if(s.mrank&&s.mrank<=30)r.push(`In the tested Momentum 30 portfolio (rank ${s.mrank} of ${BT.nrank})`);
-  else if(s.fMom>=90)r.push(`Top 10% of all stocks for 12-month momentum`);
-  else if(s.fMom>=75)r.push(`Strong 12-month momentum (better than ${Math.round(s.fMom)}% of stocks)`);
-  if(s.close>s.s50&&s.s50>s.s200&&s.s200up)r.push('Clean uptrend: above its 50-day and 200-day averages, both rising');
-  else if(s.close>s.s200&&s.s200up)r.push('Above its rising 200-day average');
-  if(s.offHigh!=null&&s.offHigh>-5)r.push(`Within ${Math.abs(s.offHigh).toFixed(1)}% of its 52-week high`);
-  const sc=s.sc;if(sc&&sc.np!=null&&sc.npYoY>0&&sc.np>sc.npYoY*1.2)r.push(`Latest quarterly profit up ${Math.round((sc.np/sc.npYoY-1)*100)}% on a year ago`);
-  if(sc&&sc.roe>=20)r.push(`High return on equity: ${sc.roe}%`);else if(s.f50&&s.f50.roe>=20)r.push(`High return on equity: ${s.f50.roe.toFixed(1)}%`);
-  const z=seasLine(s);if(z&&z.avg>0&&s.fSeas>=65)r.push(`${TMN} has been good for it: up in ${z.up} of ${z.n} years, average ${pct(z.avg)}`);
-  if(s.news&&s.news.tone==='Positive')r.push('Recent news is positive');
-  if(s.setup==='Breakout')r.push('Swing setup: broke to a 50-day high on heavy volume');else if(s.setup==='Tight base')r.push('Swing setup: tight range near its high');else if(s.setup==='Pullback')r.push('Swing setup: pulled back to its 20-day average in an uptrend');
+// ---------- buy tickets ----------
+const money=()=>+store.get('nsaMoney',0)||0;
+function qtyText(px){const m=money();if(!m)return 'Enter your trading money to see how many shares to buy.';const q=Math.floor(m/R.maxpos/px);return q>0?`Buy <b>${q.toLocaleString('en-IN')} shares</b> (about ₹${inr(q*px,0)}, one fifth of your money). If the stop-loss is hit you lose about ₹${inr(q*px*R.stop,0)}; if the target is hit you gain about ₹${inr(q*px*R.target,0)}.`:'One share costs more than a fifth of your money.';}
+function spark(px,w=110,h=34){const v=(px||[]).filter(x=>x!=null);if(v.length<5)return'';const lo=Math.min(...v),hi=Math.max(...v),n=v.length;const X_=i=>1+i*(w-2)/(n-1),Y_=x=>2+(hi-x)*(h-4)/((hi-lo)||1);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${v.map((x,i)=>(i?'L':'M')+X_(i).toFixed(1)+' '+Y_(x).toFixed(1)).join('')}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/></svg>`;}
+function newsBlock(sym){const n=(AUTO.news||{})[sym],sc=(AUTO.sc||{})[sym];let h='';
+  if(n){const t=n.tone||'';h+=`<p class="news"><span class="pill ${t==='Positive'?'pos':t==='Negative'?'neg':t==='Mixed'?'mix':''}">${esc(t||'News')}</span>${esc(n.text||'')}</p>${n.watch?`<p style="margin-top:6px;color:var(--mari-ink)">Watch: ${esc(n.watch)}</p>`:''}<p class="muted" style="font-size:12.5px;margin-top:6px">Read each night from results, exchange filings and headlines${n.date?`; checked ${esc(n.date)}`:''}. Open the sources before acting.</p>`;}
+  if(sc){const g=(a,b)=>a!=null&&b>0?pct((a/b-1)*100,0):'–';h+=`<div class="kv" style="margin-top:10px">${sc.pe!=null?`<span>Price to earnings (P/E)</span><b>${Math.round(sc.pe)}</b>`:''}${sc.np!=null?`<span>Profit, ${esc(sc.q||'latest quarter')}</span><b>₹${inr(sc.np,0)} cr, ${g(sc.np,sc.npYoY)} on a year ago</b>`:''}${sc.sales!=null?`<span>Sales, same quarter</span><b>₹${inr(sc.sales,0)} cr, ${g(sc.sales,sc.salesYoY)}</b>`:''}${sc.roe!=null?`<span>Return on equity</span><b>${inr(sc.roe,1)}%</b>`:''}${sc.de!=null?`<span>Debt to equity</span><b>${inr(sc.de,2)}</b>`:''}</div>`;}
+  if(!h)h='<p>No news or company numbers collected for this stock yet.</p>';
+  return h+`<div class="links"><a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(sym)}" target="_blank" rel="noopener">Chart on TradingView</a><a href="https://www.screener.in/company/${encodeURIComponent(sym)}/" target="_blank" rel="noopener">Screener.in</a><a href="https://www.google.com/search?tbm=nws&q=${encodeURIComponent((BY[sym]?BY[sym].name:sym)+' share')}" target="_blank" rel="noopener">Latest news</a></div>`;}
+function reason(b){const s=BY[b.sym],bits=[`Joined the 50 strongest stocks of the past year today (rank ${b.rank} of 300)`];
+  if(s&&s.r12m!=null)bits.push(s.r12m>=0?`up ${Math.round(s.r12m)}% in 12 months`:`down ${Math.round(-s.r12m)}% in 12 months`);let r=bits.join(', ')+'.';
+  const n=(AUTO.news||{})[b.sym];if(n&&n.tone==='Negative')r+=` <span class="w">Recent news is negative: ${esc(n.watch||'check it before buying')}.</span>`;
+  const sc=(AUTO.sc||{})[b.sym];if(sc&&sc.np!=null&&sc.np<0)r+=` <span class="w">The company made a loss last quarter.</span>`;
   return r;}
-function cons(s){const c=[];
-  if(!BT.rising)c.push('Market breadth is falling; the cautious model is in cash');
-  if(s.close<s.s200)c.push('Below its 200-day average: in a downtrend');
-  if(s.pen)c.push(`Score cut by ${s.pen} points for valuation (${s.penWhy})`);
-  if(s.rsi>75)c.push(`Overbought short term (RSI ${s.rsi.toFixed(0)}); entries after big runs often pull back`);
-  if(s.vol!=null&&s.vol>60)c.push(`Very volatile: about ${s.vol.toFixed(0)}% a year`);
-  const z=seasLine(s);if(z&&z.avg<0&&s.fSeas!=null&&s.fSeas<=35)c.push(`${TMN} has been weak for it: up in only ${z.up} of ${z.n} years`);
-  if(s.news&&s.news.watch)c.push('From the news: '+s.news.watch.replace(/\.$/,''));else{if(s.news&&s.news.tone==='Mixed')c.push('Recent news is mixed');if(s.news&&s.news.tone==='Negative')c.push('Recent news is negative');}
-  const f=s.sc;if(f){if(f.pe==null||f.roe<0)c.push('Loss-making over the last year');else if(f.pe>80&&!s.pen)c.push(`Expensive: P/E ${Math.round(f.pe)}`);
-    if(f.np!=null&&f.npYoY!=null&&f.np<f.npYoY)c.push('Quarterly profit below a year ago');
-    if(f.de!=null&&f.de>1.5&&s.sector!=='Financial Services')c.push(`High debt: ${f.de}× equity`);if(f.pledge>10)c.push(`Promoters have pledged ${f.pledge}% of their shares`);}
-  if(s.deliv!=null&&s.deliv<25)c.push('Low delivery: mostly intraday trading');
-  if(s.to<10)c.push('Thinly traded: under ₹10 crore a day');
-  const d=s.deals||[],sell=d.filter(x=>x.side==='SELL').reduce((a,x)=>a+x.qty,0),buy=d.filter(x=>x.side==='BUY').reduce((a,x)=>a+x.qty,0);if(sell>buy)c.push('Net selling in bulk or block deals on the last day');
-  if((s.adj||[]).some(a=>a.includes('non-standard')))c.push('Price history adjusted by estimate');
-  return c;}
-const firstCon=s=>cons(s).filter(x=>!x.startsWith('Market breadth'))[0];
+const sellBy=addBiz(asof,R.days+1);
+$('#buynote').textContent=nb?`From the close on ${dshort(asof)}`:'';
+$('#buys').innerHTML=nb?L.buys.map(b=>{const s=BY[b.sym],px=b.close;
+  return `<article class="ticket" data-px="${px}">
+   <div class="head"><div class="who"><div class="nm">${name(b.sym)}</div><div class="sym">${esc(b.sym)}${s?`, ${esc(s.sector)}`:''}</div><p class="why">${reason(b)}</p></div>
+    <div class="spark"><b>₹${inr(px)}</b>${s?`<span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}`:''}</div></div>
+   <div class="levels"><div><small>Buy near</small><b data-b>₹${inr(px)}</b><em>at the open</em></div><div class="t"><small>Target +${TP}%</small><b data-t>₹${inr(tick(px*(1+R.target)))}</b><em>GTT limit</em></div><div class="s"><small>Stop-loss −${SP}%</small><b data-s>₹${inr(tick(px*(1-R.stop)))}</b><em>GTT market</em></div><div><small>Sell by</small><b>${sellBy.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</b><em>if neither hits</em></div></div>
+   <details><summary>My buy price and how many shares</summary><div class="more"><div class="calc"><label>Your buy price ₹<input type="number" step="0.05" min="0" inputmode="decimal" placeholder="${px.toFixed(2)}" data-in></label><label>Your trading money ₹<input type="number" step="10000" min="0" inputmode="numeric" data-money value="${money()||''}"></label><output data-q>${qtyText(px)}</output></div><p style="font-size:13.5px">The target and stop-loss above update to your buy price. Those are the two numbers for the GTT.</p></div></details>
+   <details><summary>News and company numbers</summary><div class="more">${newsBlock(b.sym)}</div></details>
+  </article>`;}).join(''):`<div class="empty"><b>${used>=R.maxpos&&!sellT.length?'All 5 slots are full':'No new signals tonight'}</b>${used>=R.maxpos&&!sellT.length?`The rule holds at most ${R.maxpos} trades.${L.queue&&L.queue.length?` ${L.queue.map(q=>name(q.sym)).join(', ')} qualified today but there is no free slot.`:''} A slot frees up when a trade hits its target, its stop-loss or its sell-by date.`:'No stock joined the 50 strongest today. Signals come a few times a week on average; check again tomorrow evening.'}</div>`;
+function upd(t){const px=+t.dataset.px,b=+t.querySelector('[data-in]').value||px;t.querySelector('[data-b]').textContent='₹'+inr(b);t.querySelector('[data-t]').textContent='₹'+inr(tick(b*(1+R.target)));t.querySelector('[data-s]').textContent='₹'+inr(tick(b*(1-R.stop)));t.querySelector('[data-q]').innerHTML=qtyText(b);}
+document.querySelectorAll('.ticket').forEach(t=>{t.querySelector('[data-in]').addEventListener('input',()=>upd(t));t.querySelector('[data-money]').addEventListener('input',e=>{store.set('nsaMoney',+e.target.value||0);document.querySelectorAll('.ticket').forEach(u=>{if(u!==t)u.querySelector('[data-money]').value=e.target.value;upd(u);});});});
 
-// ---------- header, mood ----------
-const built=new Date(D.built);
-$('#asof').innerHTML=`<span>Prices from NSE close, </span>${esc(D.asof)}<br><span class="muted">Updated ${built.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</span>`;
-$('#newsAsof').textContent=AUTO.asof||ST.newsAsof||ST.fundAsof||'';
-(function(){const b=BT,a=b.breadth,v=b.bavg,Wd=150,H=46,all=a.concat(v.filter(x=>x!=null)),lo=Math.min(...all)-1,hi=Math.max(...all)+1;
-  const X=i=>2+i*(Wd-8)/(a.length-1),Y=x=>3+(hi-x)*(H-6)/(hi-lo),P=arr=>arr.map((x,i)=>x==null?'':(i&&arr[i-1]!=null?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('');
-  const calm=b.rising;
-  $('#mood').innerHTML=`<span class="tag ${calm?'calm':'care'}">${calm?'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l6-6 4 4 6-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Market mood: healthy':'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="currentColor"/></svg>Market mood: cautious'}</span>
-   <svg class="bsp" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Share of stocks above their 200-day average over the last ${a.length} days, against its 50-day average"><path d="${P(v)}" fill="none" stroke="var(--f2)" stroke-width="2"/><path d="${P(a)}" fill="none" stroke="var(--f1)" stroke-width="2"/><circle cx="${X(a.length-1)}" cy="${Y(a[a.length-1])}" r="3.5" fill="var(--f1)" stroke="var(--surface)" stroke-width="2"/></svg>
-   <p>${b.bnow}% of stocks are above their 200-day average, and that share is ${calm?'rising':'falling'}. ${calm?'In the test, trades did best in conditions like this.':'Trades did less well in conditions like this, but skipping them did worse.'}</p>
-   <div class="lg"><span><i style="background:var(--f1)"></i>Stocks above 200-day average</span><span><i style="background:var(--f2)"></i>Its 50-day average</span></div>`;})();
+// ---------- sells and open trades ----------
+function row(o,showFlag){const s=BY[o.sym],now=(s&&s.close)||o.close,p=(now/o.buy-1)*100,pos=Math.max(0,Math.min(100,(now-o.stop)/(o.target-o.stop)*100)),b0=(o.buy-o.stop)/(o.target-o.stop)*100;
+  return `<div class="row"><div><div class="nm">${name(o.sym)}</div><div class="sub">${esc(o.sym)}. Bought ${dshort(o.buyDate)} at ₹${inr(o.buy)}. Day ${o.days} of ${R.days}, sell by ${dshort(o.sellBy)}</div></div>
+   <div class="pl"><span class="${cls(p)}">${pct(p)}</span><small>₹${inr(now)} now</small></div>
+   <div class="bar"><span>Stop ₹${inr(o.stop)}</span><div class="track" role="img" aria-label="${Math.round(pos)}% of the way from stop-loss to target"><i class="b0" style="left:${b0}%"></i><i class="nw" style="left:${pos}%"></i></div><span>Target ₹${inr(o.target)}</span></div>
+   ${showFlag&&o.sellTomorrow?`<div class="flag">Sell at tomorrow's open, then delete its GTT</div>`:''}</div>`;}
+if(sellT.length){$('#sellsec').hidden=false;$('#sells').innerHTML=sellT.map(o=>row(o,true)).join('');}
+const keep=L.open.filter(o=>!o.sellTomorrow);
+const avg=keep.length?keep.reduce((a,o)=>a+(((BY[o.sym]&&BY[o.sym].close)||o.close)/o.buy-1)*100,0)/keep.length:null;
+$('#opennote').innerHTML=keep.length?`Average ${pct(avg)} since bought`:'';
+$('#open').innerHTML=keep.length?keep.map(o=>row(o,false)).join(''):'<div class="row"><div class="sub">No open trades.</div></div>';
+const CT=L.closedToday||[],WHY={target:'hit its target',stop:'hit its stop-loss',time:`was sold on day ${R.days}`};
+$('#closednote').innerHTML=(CT.length?`Closed today: ${CT.map(c=>`${name(c.sym)} ${WHY[c.why]}, <b class="${cls(c.ret)}">${pct(c.ret)}</b>`).join('; ')}. `:'')+`If you are just starting, take only new buys. You can also join an open trade if its price is still close to where it was bought, using the same target, stop-loss and sell-by date.`;
 
-// ---------- controls ----------
-$('#q').addEventListener('input',e=>{st.q=e.target.value;st.tlim=50;renderTable();});
-
-// ---------- small charts ----------
-function spark(px,w=120,h=30){const v=px.filter(x=>x!=null);if(v.length<2)return'';const lo=Math.min(...v),hi=Math.max(...v),n=px.length;const X=i=>1+i*(w-2)/(n-1),Y=x=>2+(hi-x)*(h-4)/((hi-lo)||1);
-  const d=px.map((x,i)=>x==null?'':(i&&px[i-1]!=null?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('');const up=v[v.length-1]>=v[0];
-  return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${up?'var(--gain)':'var(--loss)'}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;}
-function strip(s){const tw=s.tw||1;return `<div class="strip" role="img" aria-label="Score ${Math.round(s.score)} of 100: ${F.filter(f=>s.parts[f.k]).map(f=>f.name+' '+Math.round(s.parts[f.k].v)).join(', ')}">${F.filter(f=>s.parts[f.k]).map(f=>{const p=s.parts[f.k];const w=p.v*p.w/tw;return w>0.3?`<i style="width:${w}%;background:${f.c}${p.missing?';opacity:.35':''}" title="${f.name}: ${Math.round(p.v)}${p.missing?' (no data, counted as neutral)':''}"></i>`:'';}).join('')}</div>`;}
-
-// ---------- picks ----------
-function pool(){return S.filter(s=>(st.uni==='all'||(st.uni==='liq'&&s.liq300)||(st.uni==='watch'&&WATCH.has(s.sym)))&&(!st.sector||s.sector===st.sector));}
-function plan(s){const e=s.close;return {entry:e,target:e*1.2,stop:e*0.9,exitBy:addBiz(D.dates[D.dates.length-1],22)};}
-function tradeInfo(){const rows=Object.entries(TR).map(([k,v])=>{const b=trStat(k);return b?`<li><b>${v.name}:</b> ${pct(b.avg)} a trade on average, won ${Math.round(b.win)}% of ${b.n.toLocaleString('en-IN')} trades, held ${Math.round(b.days)} days; ${pct(b.rising_avg)} when the market was healthy, ${pct(b.falling_avg)} when cautious.</li>`:''}).join('');
-  return `<p><b>How these trades are run:</b> buy at the next morning's opening price, sell at +20% or −10%, whichever comes first, or after 40 trading days. Tested on the 300 most-traded stocks from Sept 2022 to Nov 2026, after 0.3% costs. When a stock opened below the stop after bad news, the test sold at that lower opening price, as you would. For comparison, buying at random made ${(()=>{const b=TB['Random entry (baseline)'];return b?pct(b.avg):'–';})()} a trade.</p><ul>${rows}</ul><p class="muted">About half the trades lose; profit comes from winners being twice the size of losers. Most of the gain came in 2023; in 2022 these setups lost money. Trade only when the market mood is healthy: in cautious markets they made about nothing. Keep each trade small${BT.rising?'':', and today the market is cautious'}.</p>`;}
-function tradeRow(s,i){const t=s.trade,R_=TR[t.rule],pl=plan(s),mv=(s.close/t.sigClose-1)*100,b=trStat(t.rule);
-  return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${esc(s.name)}, ${R_.name} setup">
-    <div class="rk" aria-hidden="true">${i+1}</div>
-    <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
-      <p class="why">${esc(R_.long)} ${t.daysAgo===0?'today':t.daysAgo===1?'yesterday':'2 days ago'}.${Math.abs(mv)>=1?` Price ${mv>0?'up':'down'} ${Math.abs(mv).toFixed(1)}% since.`:''}${mv>5?' <span class="c">Watch: it has already moved; consider skipping rather than chasing.</span>':''}${s.news&&s.news.tone==='Negative'?` <span class="c">Watch: negative news.</span>`:''}</p></div>
-    <div class="fs tplan"><span><small>Buy near</small><b>₹${inr(pl.entry)}</b></span><span><small>Target +20%</small><b class="up">₹${inr(pl.target)}</b></span><span><small>Stop −10%</small><b class="down">₹${inr(pl.stop)}</b></span><span><small>Exit by</small><b>${fmtDay(pl.exitBy)}</b></span></div>
-    <div class="score"><b style="font-size:24px">${b?pct(b.avg):'–'}</b><span class="muted" style="font-weight:500">tested avg a trade</span>${!BT.rising?'<span class="waitchip">Market says wait</span>':''}</div>
-    <div class="px"><b>${R_.name}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}
-function renderPicks(){
-  document.querySelectorAll('.style').forEach(b=>b.setAttribute('aria-pressed',String(!st.custom&&b.dataset.s===st.style)));
-  document.querySelectorAll('#uni button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===st.uni)));
-  const tradeMode=!st.custom&&STY[st.style].trade;
-  const P=tradeMode?pool().filter(s=>s.trade&&(st.uni!=='liq'||s.liq300||true)).sort((a,b)=>TR[a.trade.rule].order-TR[b.trade.rule].order||a.trade.daysAgo-b.trade.daysAgo||b.score-a.score)
-    :pool().filter(s=>st.uni==='watch'||!gated()||s.close>s.s200).sort((a,b)=>b.score-a.score);
-  $('#caution').hidden=!!BT.rising;
-  $('#headline').textContent=st.uni==='watch'?'Your watchlist, ranked':tradeMode?`${P.length} swing-trade setups from the last 3 days`:`Today's ${Math.min(st.lim,P.length)||''} best-scoring NSE stocks`.replace('  ',' ');
-  $('#tradeinfo').hidden=!tradeMode;$('#legend').hidden=tradeMode;if(tradeMode)$('#tradeinfo').innerHTML=tradeInfo();
-  if(!P.length){$('#picks').innerHTML=`<li class="empty">${tradeMode?'No new setups in the last 3 trading days. Check back tomorrow.':st.uni==='watch'?'Your watchlist is empty. Open any stock and choose “Add to watchlist”.':'No stock in this sector is above its 200-day average right now. Try All sectors or All stocks.'}</li>`;return;}
-  if(tradeMode){$('#picks').innerHTML=P.slice(0,st.lim).map((s,i)=>tradeRow(s,i)).join('')+(P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');return;}
-  $('#picks').innerHTML=P.slice(0,st.lim).map((s,i)=>{const [vl,vc]=verdict(s),p=pros(s).slice(0,2),c=firstCon(s);
-    return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${i+1}. ${esc(s.name)}, score ${Math.round(s.score)}">
-      <div class="rk" aria-hidden="true">${i+1}</div>
-      <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
-        <p class="why">${esc(p.join('. '))}${c?`. <span class="c">Watch: ${esc(c.charAt(0).toLowerCase()+c.slice(1))}</span>`:''}</p></div>
-      <div class="fs">${strip(s)}<div class="stripcap"><span>${s.setup?esc(s.setup)+' setup':''}</span><span>${s.news?'News: '+esc(s.news.tone.toLowerCase()):''}</span></div></div>
-      <div class="score"><b>${Math.round(s.score)}</b><span class="v-${vc}">${vl}</span>${!BT.rising&&vc!=='avoid'?'<span class="waitchip">Market says wait</span>':''}</div>
-      <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')+
-    (P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');
-}
-for(const id of ['#picks','#trades']){$(id).addEventListener('click',e=>{if(e.target.closest('input,label,button,a'))return;const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
-  $(id).addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('.pick');if(li){e.preventDefault();openStock(li.dataset.sym);}}});}
-
-
-// ---------- table ----------
-const COLS=[['name','Stock','l'],['score','Score',''],['verdict','Verdict','l'],['fMom','Momentum',''],['fTrend','Trend',''],['fFund','Results',''],['fSeas','Season',''],['news','News','l'],['setup','Setup','l'],['close','Price ₹',''],['chg','Today',''],['r6m','6 months','']];
-function renderTable(){
-  const q=st.q.trim().toLowerCase();
-  let r=pool().filter(s=>!q||s.sym.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
-  const key=s=>st.sort==='name'?s.name:st.sort==='verdict'?s.score-(s.close<s.s200?100:0):st.sort==='news'?(s.fNews??-1):st.sort==='setup'?(s.setup||''):s[st.sort];
-  r.sort((a,b)=>{const x=key(a),y=key(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return typeof x==='string'?st.dir*x.localeCompare(y):st.dir*(x-y);});
-  $('#tbl thead').innerHTML='<tr>'+COLS.map(c=>`<th scope="col" class="${c[2]} ${st.sort===c[0]?'on':''}" data-k="${c[0]}" aria-sort="${st.sort===c[0]?(st.dir<0?'descending':'ascending'):'none'}">${c[1]}${st.sort===c[0]?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr>';
-  const bar=(v,c)=>v==null?'<span class="muted">–</span>':`${Math.round(v)}<span class="mini"><i style="width:${v}%;background:${c}"></i></span>`;
-  $('#tbl tbody').innerHTML=r.slice(0,st.tlim).map(s=>{const [vl,vc]=verdict(s);return `<tr data-sym="${esc(s.sym)}" tabindex="0">
-    <td class="l"><span class="s">${esc(s.sym)}</span><span class="n2">${esc(s.name)}</span></td><td><b>${Math.round(s.score)}</b></td><td class="l"><span class="v-${vc}" style="font-weight:600;font-size:13px">${vl}</span></td>
-    <td>${bar(s.fMom,'var(--f1)')}</td><td>${bar(s.fTrend,'var(--f2)')}</td><td>${bar(s.fFund,'var(--f3)')}</td><td>${bar(s.fSeas,'var(--f4)')}</td>
-    <td class="l">${s.news?`<span class="pill ${s.news.tone==='Positive'?'pos':s.news.tone==='Mixed'?'mix':s.news.tone==='Negative'?'neg':''}">${esc(s.news.tone)}</span>`:'<span class="muted">–</span>'}</td>
-    <td class="l">${s.setup?esc(s.setup):'<span class="muted">–</span>'}</td><td>${inr(s.close)}</td><td class="${cls(s.chg)}">${pct(s.chg)}</td><td class="${cls(s.r6m)}">${pct(s.r6m,0)}</td></tr>`;}).join('')||`<tr><td colspan="${COLS.length}" class="l" style="padding:24px">No stock matches “${esc(st.q)}”. Check the spelling or switch to All stocks.</td></tr>`;
-  $('#tmore').hidden=r.length<=st.tlim;$('#cnt').textContent=`${r.length.toLocaleString('en-IN')} ${r.length===1?'stock':'stocks'}`;
-  $('#allnote').textContent=st.uni==='liq'?'Showing the 300 most-traded stocks. Switch to All stocks above to see every stock the agent covers.':'Sorted by score. Click a column to sort; click a row for details.';
-}
-$('#tbl thead').addEventListener('click',e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;if(st.sort===k)st.dir*=-1;else{st.sort=k;st.dir=(k==='name'||k==='setup')?1:-1;}renderTable();});
-$('#tbl tbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-sym]');if(tr)openStock(tr.dataset.sym);});
-$('#tbl tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr[data-sym]');if(tr)openStock(tr.dataset.sym);}});
-$('#tmoreBtn').addEventListener('click',()=>{st.tlim+=50;renderTable();});
-
-function renderAll(){S.forEach(score);renderMom();renderTable();}
-const MOM=D.mom||null;
-const nextReview=()=>{const t=new Date(D.dates[D.dates.length-1]+'T00:00:00');const e=new Date(t.getFullYear(),t.getMonth()+1,0);while(e.getDay()===0||e.getDay()===6)e.setDate(e.getDate()-1);if(MOM&&MOM.reviewIsToday)return t;return e;};
-const dlong=x=>x.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-const dd=t=>new Date(t+'T00:00:00');
-const LV=(EXT&&EXT.live)||{open:[],buys:[],queue:[],closedToday:[],freshToday:[]},RU=(EXT&&EXT.rule)||{target:.2,stop:.1,days:21,maxpos:5},XS=(EXT&&EXT.stats)||null;
-const nmS=sym=>{const s=BY[sym];return esc(s?s.name.replace(/ Limited$| Ltd\.?$/i,''):sym);};
-const gtt=b=>({stop:b*(1-RU.stop),tgt:b*(1+RU.target)});
-const r2=x=>Math.round(x*20)/20;   // NSE tick size is 5 paise
-const why_={target:'hit the target',stop:'hit the stop',time:'sold on day '+RU.days};
-function sharesFor(px){const m=+store.get('nsaMoney',0);if(!m||!px)return '';const q=Math.floor(m/RU.maxpos/px);return q>0?`Buy about <b>${q.toLocaleString('en-IN')} shares</b> (₹${inr(q*px,0)}).`:'One share costs more than a fifth of your money.';}
-function renderMom(){
-  $('#caution').hidden=!!BT.rising;
-  const Mo=EXT.mood||{},F=XS,Bn=EXT.bench||{};
-  if(F){$('#mdd').textContent=Mo.dd+'%';$('#fdd').textContent=F.dd+'%';$('#mcg').textContent=Mo.cagr+'%';$('#fcg').textContent=F.cagr+'%';}
-  const used=LV.open.length,sellT=LV.open.filter(x=>x.sellTomorrow).length,asof=LV.asof||D.dates[D.dates.length-1];
+// ---------- results ----------
+const yrs=(new Date(X.end)-new Date(X.start))/31557600000;
+$('#big3').innerHTML=`<div><b>${Math.round(F.cagr)}%</b><span>a year in the test, against ${Math.round(B.cagr)}% for the market</span></div><div><b>${Math.round(F.win)}%</b><span>of trades made money; ${Math.round(F.hit_target)}% reached the +${TP}% target</span></div><div><b>−${Math.abs(Math.round(F.dd))}%</b><span>worst fall from a peak along the way</span></div>`;
+(function(){const c=X.curve;if(!c)return;const N=c.dates.length,W=720,H=250,m={l:6,r:62,t:10,b:24};
+  const a=c.rule.map(v=>v/100),b=c.bench.map(v=>v/100),mx=Math.max(...a,...b)*1.06,mn=Math.min(...a,...b)*.94;
+  const XX=i=>m.l+i*(W-m.l-m.r)/(N-1),YY=v=>m.t+(Math.log(mx)-Math.log(v))*(H-m.t-m.b)/(Math.log(mx)-Math.log(mn));
+  let g='';[.8,1,1.5,2,3,4,5].filter(v=>v>mn&&v<mx).forEach(v=>{g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${YY(v)}" y2="${YY(v)}" stroke="var(--grid)"/><text x="${W-m.r+6}" y="${YY(v)+4}">₹${v} lakh</text>`;});
+  let xt='',ly='';c.dates.forEach((d,i)=>{const y=d.slice(0,4);if(y!==ly&&i>2)xt+=`<text x="${XX(i)}" y="${H-6}" text-anchor="middle">${y}</text>`;ly=y;});
+  const path=(s,col)=>`<path d="${s.map((v,i)=>(i?'L':'M')+XX(i).toFixed(1)+' '+YY(v).toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/><circle cx="${XX(N-1)}" cy="${YY(s[N-1])}" r="4" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+  $('#chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Growth of 1 lakh rupees: this rule ended at ${a[N-1].toFixed(2)} lakh, the market at ${b[N-1].toFixed(2)} lakh">${g}${xt}${path(b,'var(--s2)')}${path(a,'var(--s1)')}<line id="cx" y1="${m.t}" y2="${H-m.b}" stroke="var(--line2)" visibility="hidden"/></svg><div class="tip" id="ctip"></div>`;
+  const sv=$('#chart svg'),tp=$('#ctip'),cx=$('#cx');
+  sv.addEventListener('pointermove',e=>{const r=sv.getBoundingClientRect();let i=Math.round(((e.clientX-r.left)*W/r.width-m.l)*(N-1)/(W-m.l-m.r));i=Math.max(0,Math.min(N-1,i));cx.setAttribute('x1',XX(i));cx.setAttribute('x2',XX(i));cx.setAttribute('visibility','visible');
+    tp.innerHTML=`<b>${dlong(c.dates[i])}</b><br>This rule: ₹${a[i].toFixed(2)} lakh<br>Market: ₹${b[i].toFixed(2)} lakh`;tp.style.display='block';let l=e.clientX-r.left+12;if(l+170>r.width)l-=190;tp.style.left=l+'px';tp.style.top=Math.max(0,e.clientY-r.top-60)+'px';});
+  sv.addEventListener('pointerleave',()=>{tp.style.display='none';cx.setAttribute('visibility','hidden');});
   const pd=x=>new Date(x).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
-  $('#rulebox').innerHTML=`<div><b>The rule</b><ol><li>Each evening, find stocks that have just entered the top 30 of the 300 most-traded NSE stocks by momentum (12-month rise skipping the last month, adjusted for how jumpy the stock is) and were not in the top 30 in the 20 days before.</li><li>Buy the strongest at the next open, at most ${RU.maxpos} trades at a time, one fifth of your money each.</li><li>Sell at +${Math.round(RU.target*100)}% or −${Math.round(RU.stop*100)}% from your buy price, whichever comes first (a GTT does this for you), or at the open after ${RU.days} trading days.</li></ol>${F?`<p style="margin-top:8px">Tested ${pd(EXT.start)} to ${pd(EXT.end)} with 0.3% costs, before tax: <b>${F.cagr}% a year</b> against ${Bn.cagr}% for the 300 most-traded stocks. Worst fall ${F.dd}%. Selling after 18 to 25 days instead of 21 gave ${Math.round(F.range[0])}% to ${Math.round(F.range[1])}% a year, so expect a range, not an exact number. In 2022–24 it roughly matched the market (${F.first}% against ${Bn.first}%); in 2025–26 it did far better (${F.second}% against ${Bn.second}%).</p>`:''}</div>
-   <div><b>Tonight, ${dlong(dd(asof))}</b><div class="next">${LV.buys.length?`${LV.buys.length} to buy`:'Nothing to buy'}${sellT?`, ${sellT} to sell`:''}</div><p>${used} of ${RU.maxpos} trade slots in use${sellT?`, ${sellT} freeing up tomorrow`:''}.</p>${F?`<div class="stat"><span>Trades a year</span><b>about ${F.per_year}</b><span>Hit the +${Math.round(RU.target*100)}% target</span><b>${Math.round(F.hit_target)}% of trades</b><span>Hit the −${Math.round(RU.stop*100)}% stop</span><b>${Math.round(F.hit_stop)}%</b><span>Sold on day ${RU.days}</span><b>${Math.round(F.timed_out)}%</b><span>Average trade</span><b>${pct(F.avg)}</b><span>Winning trades</span><b>${Math.round(F.win)}%</b></div><p style="margin-top:8px">By year: ${Object.entries(F.years).map(([y,v])=>`${y} <b class="${cls(v)}">${(v>0?'+':'')+Math.round(v)}%</b>`).join(', ')}${EXT.end?' (to '+new Date(EXT.end).toLocaleDateString('en-IN',{day:'numeric',month:'short'})+')':''}.</p>`:''}</div>`;
-  const sellBy=addBiz(asof,RU.days+1);
-  $('#buynote').innerHTML=LV.buys.length?`Signals from the close on ${dlong(dd(asof))}. The prices below assume you buy at today's close; type your real buy price for exact GTT numbers.`:(used>=RU.maxpos&&!sellT?`All ${RU.maxpos} slots are full, so there is nothing to buy tonight.`:'No stock entered the top 30 today. Check again tomorrow evening.');
-  const m0=store.get('nsaMoney','');$('#money').value=m0||'';
-  $('#picks').innerHTML=LV.buys.map((b,i)=>{const s=BY[b.sym],px=b.close,g=gtt(px),c=s?firstCon(s):null;
-    return `<li class="pick" tabindex="0" data-sym="${esc(b.sym)}">
-     <div class="rk" aria-hidden="true">${i+1}</div>
-     <div><div class="nm">${nmS(b.sym)}<small>${esc(b.sym)}${s?', '+esc(s.sector):''}</small></div>
-      <p class="why">Just joined the 30 strongest: rank ${b.rank} of 300 today${s&&s.m121!=null?`, up ${pct(s.m121,0)} over the year before last month`:''}.${c?` <span class="c">Watch: ${esc(c.charAt(0).toLowerCase()+c.slice(1))}</span>`:''}${s&&s.news&&s.news.tone==='Negative'?` <span class="c">News: ${esc(s.news.watch||'negative')}</span>`:''}</p>
-      <span class="tag new">Buy at tomorrow's open</span></div>
-     <div class="fs"><div class="tplan" data-g><span><small>Buy near</small><b>₹${inr(px)}</b></span><span><small>Stop trigger −${Math.round(RU.stop*100)}%</small><b class="down" data-s>₹${inr(r2(g.stop))}</b></span><span><small>Target +${Math.round(RU.target*100)}%</small><b class="up" data-t>₹${inr(r2(g.tgt))}</b></span><span><small>Sell by</small><b>${fmtDay(sellBy)}</b></span></div>
-      <div class="gtt"><label>Your buy price ₹<input type="number" step="0.05" min="0" inputmode="decimal" placeholder="${px.toFixed(2)}" data-px="${px}"></label><span data-q>${sharesFor(px)}</span></div></div>
-     <div class="score"><b>${b.rank}</b><span class="muted" style="font-weight:500">rank today</span></div>
-     <div class="px"><b>₹${inr(px)}</b>${s?`<span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}`:''}</div></li>`;}).join('')||`<li class="empty">${esc($('#buynote').textContent)}</li>`;
-  $('#picks').querySelectorAll('input[data-px]').forEach(inp=>inp.addEventListener('input',()=>{const li=inp.closest('li'),b=+inp.value||+inp.dataset.px,g=gtt(b);li.querySelector('[data-s]').textContent='₹'+inr(r2(g.stop));li.querySelector('[data-t]').textContent='₹'+inr(r2(g.tgt));li.querySelector('[data-q]').innerHTML=sharesFor(b);}));
-  const OP=LV.open.map(o=>({...o,now:(BY[o.sym]&&BY[o.sym].close)||o.close})),av=OP.length?OP.reduce((a,o)=>a+(o.now/o.buy-1)*100,0)/OP.length:null;
-  $('#holdnote').innerHTML=OP.length?`${OP.length} open, bought on earlier evenings' signals. Average ${av!=null?`<b class="${cls(av)}">${pct(av)}</b>`:''} since bought, before costs. If you are just starting, take only new buys; you can also join an open trade if its price is still close to the buy price.`:'No open trades.';
-  $('#trades').innerHTML=OP.map((o,i)=>{const s=BY[o.sym],p=(o.now/o.buy-1)*100,pos=Math.max(0,Math.min(100,(o.now-o.stop)/(o.target-o.stop)*100)),bpos=(o.buy-o.stop)/(o.target-o.stop)*100;
-    return `<li class="pick" tabindex="0" data-sym="${esc(o.sym)}">
-     <div class="rk" aria-hidden="true">${i+1}</div>
-     <div><div class="nm">${nmS(o.sym)}<small>${esc(o.sym)}${s?', '+esc(s.sector):''}</small></div>
-      <p class="why">Bought at the open on ${dlong(dd(o.buyDate))} at ₹${inr(o.buy)}. Day ${o.days} of ${RU.days}.${s&&s.news&&s.news.tone==='Negative'?` <span class="c">News: ${esc(s.news.watch||'negative')}</span>`:''}</p>
-      <span class="tag ${o.sellTomorrow?'out':'trade'}">${o.sellTomorrow?`Sell at tomorrow's open (day ${RU.days}), then delete its GTT`:'GTT waiting for target or stop'}</span></div>
-     <div class="fs"><div class="tplan"><span><small>Bought at</small><b>₹${inr(o.buy)}</b></span><span><small>Stop</small><b class="down">₹${inr(o.stop)}</b></span><span><small>Target</small><b class="up">₹${inr(o.target)}</b></span><span><small>Sell by</small><b>${fmtDayS(o.sellBy)}</b></span></div>
-      <div class="range" role="img" aria-label="Price ₹${inr(o.now)}: ${Math.round(pos)}% of the way from stop to target"><i class="bz" style="left:${bpos}%"></i><i class="nw" style="left:${pos}%"></i></div><div class="rangecap"><span>Stop</span><span>Target</span></div></div>
-     <div class="score"><b class="${cls(p)}" style="font-size:28px">${pct(p)}</b><span class="muted" style="font-weight:500">since bought</span></div>
-     <div class="px"><b>₹${inr(o.now)}</b>${s?`<span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}`:''}</div></li>`;}).join('')||'<li class="empty">No open trades.</li>';
-  const CT=LV.closedToday||[],Q=LV.queue||[];
-  $('#changes').innerHTML=`<div><b>Closed today</b><br>${CT.length?CT.map(x=>`${esc(x.sym)} ${why_[x.why]}: <b class="${cls(x.ret)}">${pct(x.ret)}</b> after ${x.days} days`).join('<br>'):'Nothing closed today.'}</div><div><b>Also signalled, no free slot</b><br>${Q.length?Q.map(x=>esc(x.sym)).join(', '):'None.'}<br><span class="muted">The rule takes the strongest signals first and skips the rest.</span></div>`;
-  const TL=((EXT&&EXT.trades)||[]).slice().reverse(),cnt=k=>TL.filter(x=>x.why===k).length,avg=TL.length?TL.reduce((a,x)=>a+x.ret,0)/TL.length:0;
-  $('#recsum').textContent=TL.length?`Last ${TL.length} closed trades: ${cnt('target')} hit the target, ${cnt('stop')} the stop, ${cnt('time')} sold on day ${RU.days}; average ${pct(avg)}`:'Closed trades';
-  $('#recent').innerHTML=`<thead><tr><th>Stock</th><th>Bought</th><th>Sold</th><th>How</th><th>Return</th></tr></thead><tbody>${TL.map(x=>`<tr><td>${esc(x.sym)}</td><td>${dlong(dd(x.buy))}</td><td>${dlong(dd(x.sell))}</td><td>${why_[x.why]}</td><td><b class="${cls(x.ret)}">${pct(x.ret)}</b></td></tr>`).join('')}</tbody>`;
-}
-$('#money').addEventListener('input',e=>{store.set('nsaMoney',+e.target.value||0);$('#picks').querySelectorAll('input[data-px]').forEach(inp=>inp.dispatchEvent(new Event('input')));});
-const fmtDayS=d=>dd(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-
-
-// ---------- drawer ----------
-const dlg=$('#drawer');
-function priceChart(s,stopP,tgtP){
-  const Wd=640,H=250,m={l:6,r:78,t:10,b:22},px=s.px,n=px.length,DT=D.dates;
-  const sp=a=>a.map((v,j)=>[n-1-5*(a.length-1-j),v]).filter(p=>p[1]!=null&&p[0]>=0);const m50=sp(s.p50||[]),m200=sp(s.p200||[]);
-  const lv=[['Target',tgtP],['Entry',s.close],['Stop',stopP]];
-  const all=px.filter(x=>x!=null).concat(m50.map(p=>p[1]),m200.map(p=>p[1]),lv.map(x=>x[1]));let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*.06;lo-=pad;hi+=pad;
-  const X=i=>m.l+i*(Wd-m.l-m.r)/(n-1),Y=v=>m.t+(hi-v)*(H-m.t-m.b)/(hi-lo);
-  const path=a=>{let d='',pen=false;a.forEach((v,i)=>{if(v==null){pen=false;return;}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pen=true;});return d;};
-  const pathS=a=>a.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join('');
-  let g='';for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;g+=`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>`;}
-  let xt='',last='';DT.forEach((d,i)=>{const mo=d.slice(0,7);if(mo!==last&&i>4&&i<n-6)xt+=`<text x="${X(i)}" y="${H-6}" text-anchor="middle">${MON[+d.slice(5,7)-1]}</text>`;last=mo;});
-  const ls=lv.map(([t,v])=>({t,v,y:Y(v)})).sort((a,b)=>a.y-b.y);for(let i=1;i<ls.length;i++)if(ls[i].y-ls[i-1].y<13)ls[i].y=ls[i-1].y+13;
-  const lines=ls.map(o=>`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(o.v)}" y2="${Y(o.v)}" stroke="var(--ink2)" stroke-width="1" stroke-dasharray="${o.t==='Entry'?'6 3':'2 3'}" opacity=".7"/><text x="${Wd-m.r+6}" y="${o.y+4}" style="fill:var(--ink2)">${o.t} ${Math.round(o.v).toLocaleString('en-IN')}</text>`).join('');
-  const at=(a,i)=>{for(let j=1;j<a.length;j++)if(a[j][0]>=i){const [x0,y0]=a[j-1],[x1,y1]=a[j];return y0+(y1-y0)*(i-x0)/(x1-x0);}return null;};
-  const html=`<div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:6px"><span><i style="background:var(--f1)"></i>Price</span><span><i style="background:var(--f2)"></i>50-day average</span><span><i style="background:var(--f3)"></i>200-day average</span><span class="muted">Dashed: entry, stop and target from the trade plan</span></div>
-   <div style="position:relative"><svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${esc(s.name)} closing price for the last ${n} trading days with 50 and 200-day averages">${g}${xt}<path d="${pathS(m200)}" fill="none" stroke="var(--f3)" stroke-width="2"/><path d="${pathS(m50)}" fill="none" stroke="var(--f2)" stroke-width="2"/><path d="${path(px)}" fill="none" stroke="var(--f1)" stroke-width="2" stroke-linejoin="round"/>${lines}
-    <circle cx="${X(n-1)}" cy="${Y(px[n-1])}" r="4" fill="var(--f1)" stroke="var(--surface)" stroke-width="2"/><line id="cx" y1="${m.t}" y2="${H-m.b}" stroke="var(--line2)" visibility="hidden"/><circle id="cd" r="4" fill="var(--f1)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/><rect x="${m.l}" y="0" width="${Wd-m.l-m.r}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" id="ptip"></div></div>`;
-  return {html,bind(root){const svg=root.querySelector('svg'),tip=root.querySelector('#ptip'),cx=root.querySelector('#cx'),cd=root.querySelector('#cd');
-    svg.addEventListener('pointermove',e=>{const r=svg.getBoundingClientRect();let i=Math.round(((e.clientX-r.left)*Wd/r.width-m.l)*(n-1)/(Wd-m.l-m.r));i=Math.max(0,Math.min(n-1,i));if(px[i]==null)return;
-      cx.setAttribute('x1',X(i));cx.setAttribute('x2',X(i));cx.setAttribute('visibility','visible');cd.setAttribute('cx',X(i));cd.setAttribute('cy',Y(px[i]));cd.setAttribute('visibility','visible');
-      const a5=at(m50,i),a2=at(m200,i);tip.innerHTML=`<b>${new Date(DT[i]).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</b><br>Price ₹${inr(px[i])}<br>50-day ${a5==null?'–':'₹'+inr(a5)}<br>200-day ${a2==null?'–':'₹'+inr(a2)}`;
-      tip.style.display='block';let l=(e.clientX-r.left)+14;if(l+170>r.width)l-=190;tip.style.left=l+'px';tip.style.top=Math.max(0,(e.clientY-r.top)-30)+'px';});
-    svg.addEventListener('pointerleave',()=>{tip.style.display='none';cx.setAttribute('visibility','hidden');cd.setAttribute('visibility','hidden');});}};
-}
-function seasChart(s){const z=s.seas;if(!z||!z.n.some(x=>x>0))return {html:'<p class="muted">Not enough history yet.</p>',bind(){}};
-  const Wd=640,H=170,m={l:6,r:6,t:22,b:24},vals=z.avg.map(v=>v??0),mx=Math.max(4,...vals.map(Math.abs));const bw=(Wd-m.l-m.r)/12,Y=v=>m.t+(mx-v)*(H-m.t-m.b)/(2*mx),y0=Y(0);
-  let bars='';z.avg.forEach((v,i)=>{if(v==null)return;const x=m.l+i*bw+bw*.18,w=bw*.64,y=v>=0?Y(v):y0,h=Math.max(1,Math.abs(Y(v)-y0));const hl=i===TM;
-    bars+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${v>=0?'var(--pos)':'var(--neg)'}" ${hl?'stroke="var(--ink)" stroke-width="2"':'opacity=".75"'}/>`;
-    if(hl)bars+=`<text x="${x+w/2}" y="${v>=0?y-6:y+h+13}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${pct(v)}</text>`;});
-  const xt=MON.map((t,i)=>`<text x="${m.l+i*bw+bw/2}" y="${H-6}" text-anchor="middle" style="${i===TM?'fill:var(--ink);font-weight:700':''}">${t}</text>`).join('');
-  const hit=MON.map((t,i)=>`<rect x="${m.l+i*bw}" y="0" width="${bw}" height="${H}" fill="transparent" data-i="${i}"/>`).join('');
-  const html=`<div style="position:relative"><svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Average return in each calendar month over the past ${Math.max(...z.n)} years"><line x1="${m.l}" x2="${Wd-m.r}" y1="${y0}" y2="${y0}" stroke="var(--line2)"/>${bars}${xt}${hit}</svg><div class="tip" id="stip"></div></div>
-   <p class="ink2" style="font-size:13.5px;margin-top:6px">${z.n[TM]>=4?`In ${TMN}, ${esc(s.sym)} rose in <b>${z.up[TM]} of ${z.n[TM]}</b> years, by ${pct(z.avg[TM])} on average. Its seasonality score is ${s.fSeas==null?'–':Math.round(s.fSeas)}, compared with other stocks in the same month.`:`Fewer than four ${TMN}s of history, so seasonality counts as neutral.`} Blue bars are average gains, red are losses.</p>`;
-  return {html,bind(root){const svg=root.querySelector('svg'),tip=root.querySelector('#stip');svg.addEventListener('pointermove',e=>{const t=e.target.closest('rect[data-i]');if(!t){tip.style.display='none';return;}const i=+t.dataset.i,r=svg.getBoundingClientRect();
-    tip.innerHTML=z.n[i]?`<b>${MONL[i]}</b><br>Average ${pct(z.avg[i])}<br>Up in ${z.up[i]} of ${z.n[i]} years`:`<b>${MONL[i]}</b><br>No data`;tip.style.display='block';let l=(e.clientX-r.left)+12;if(l+150>r.width)l-=170;tip.style.left=l+'px';tip.style.top='10px';});
-    svg.addEventListener('pointerleave',()=>tip.style.display='none');}};}
-
-function openStock(sym){const s=BY[sym];if(!s)return;score(s);
-  const tm=!st.custom&&STY[st.style].trade,[vl,vc]=verdict(s),P=pros(s),C=cons(s),stopP=tm?s.close*0.9:s.stop,risk=s.close-stopP,tgt=tm?s.close*1.2:s.close+2*risk,pc=priceChart(s,stopP,tgt),sc=seasChart(s);
-  const nz=s.news,f=s.sc,f5=s.f50;
-  const summary=vc==='strong'?'Scores high on what the agent checks.':vc==='good'?'Above average on the important checks, with some gaps.':vc==='watch'?'Mixed signals.':(gated()&&s.close<s.s200)?'Its price is in a downtrend, so this style does not rank it.':'Scores low on what has mattered most.';
-  const fund=[];
-  if(f){fund.push(['Market cap',`₹${inr(f.mcap,0)} cr`],['P/E',f.pe??'–'],['Return on equity',f.roe!=null?f.roe+'%':'–'],['Return on capital',f.roce!=null?f.roce+'%':'–']);
-    if(f.np!=null)fund.push([`Net profit, ${f.q||'latest quarter'}`,`₹${inr(f.np,0)} cr <span class="muted">vs ₹${inr(f.npYoY,0)} cr</span>`]);
-    if(f.sales!=null)fund.push(['Sales, same quarter',`₹${inr(f.sales,0)} cr <span class="muted">vs ₹${inr(f.salesYoY,0)} cr</span>`]);
-    fund.push(['Debt to equity',f.de??'–']);if(f.prom)fund.push(['Promoter holding',`${f.prom[1]}% <span class="${f.prom[1]>=f.prom[0]?'up':'down'}">${pct(f.prom[1]-f.prom[0],2)}</span>`]);if(f.fii)fund.push(['FII holding',`${f.fii[1]}% <span class="${f.fii[1]>=f.fii[0]?'up':'down'}">${pct(f.fii[1]-f.fii[0],2)}</span>`]);if(f.pledge)fund.push(['Pledged by promoters',f.pledge+'%']);}
-  else if(f5){fund.push(['P/E',inr(f5.pe,1)],['P/B',inr(f5.pb,1)],['Return on equity',inr(f5.roe,1)+'%'],['5-year sales growth',inr(f5.sales5,1)+'%'],['5-year profit growth',inr(f5.profit5,1)+'%']);if(f5.evebitda)fund.push(['EV/EBITDA',inr(f5.evebitda,1)]);}
-  const fsrc=f?esc(s.scSrc):f5?`MoneyWorks4Me, ${esc(ST.fundAsof)}`:'';
-  dlg.innerHTML=`<div class="dhead"><div><h2 id="dname">${esc(s.name)}</h2><p class="meta">${esc(s.sym)}, ${esc(s.sector)}, ${esc(s.idx)}</p><p class="pxl"><b>₹${inr(s.close)}</b> <span class="${cls(s.chg)}">${pct(s.chg)}</span> <span class="muted">at close, ${esc(D.asof)}</span></p></div>
-     <div class="acts"><button type="button" class="btn" id="wbtn">${WATCH.has(s.sym)?'On watchlist ✓':'Add to watchlist'}</button><button type="button" class="iconbtn" id="dclose" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div></div>
-   <div class="dbody">
-    <div class="card verdict"><div class="big v-${vc}">${Math.round(s.score)}</div><div class="vl v-${vc}">${vl}</div><p>${summary} Score out of 100 for the ${st.custom?'custom':STY[st.style].name.toLowerCase()} style.</p></div>
-    <div class="two"><div class="card"><h3>Why it scores well</h3>${P.length?`<ul class="ul pro">${P.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">Nothing stands out.</p>'}</div>
-      <div class="card"><h3>Watch out for</h3>${C.length?`<ul class="ul con">${C.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">None of the caution checks apply.</p>'}</div></div>
-    <div class="card"><h3>What went into the score</h3><div class="fbars">${F.map(fx=>{const p=s.parts[fx.k],v=s[fx.f];return `<div class="fbar"><span>${fx.name}</span><div class="t"><i style="width:${v??0}%;background:${fx.c}"></i></div><b>${v==null?'<span class="muted" title="No data, counted as 50">n/a</span>':Math.round(v)}</b><span class="w">weight ${p?p.w:0}</span></div>`;}).join('')}</div>
-      <p class="muted" style="font-size:12.5px;margin-top:10px">Each factor is 0 to 100, ranked against other stocks. Missing data counts as 50 (neutral).${s.pen?` Then ${s.pen} points off for valuation (${esc(s.penWhy)}).`:''}</p></div>
-    <div class="card"><h3>Price, last 6 months</h3>${pc.html}</div>
-    <div class="card"><h3>Seasonality: how ${TMN} has gone</h3>${sc.html}</div>
-    <div class="card"><h3>Latest news</h3>${nz?(nz.read||nz.ai?`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">checked ${esc(nz.fetched||nz.date)}</span></p><p style="font-size:14.5px">${esc(nz.text)}</p>${nz.watch?`<p class="note" style="margin-top:10px">Watch: ${esc(nz.watch)}</p>`:''}
-      ${nz.items&&nz.items.length?`<details style="margin-top:10px"><summary style="font-size:13.5px">Recent headlines (${nz.items.length})</summary><ul class="ul" style="gap:7px;margin-top:8px">${nz.items.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul></details>`:''}
-      <p class="muted" style="font-size:12.5px;margin-top:8px">${nz.read==='ai'?'Summary written each night by Claude, using only the results, exchange announcements and headlines collected for this stock.':'Summary built each night from the company\'s reported results, its own stock-exchange announcements and shareholding changes (via Screener.in). Headlines are listed for reference only.'} Open the sources before acting.</p>`:`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">${esc(nz.date)}</span></p>${nz.items?(nz.items.length?`<ul class="ul" style="gap:9px">${nz.items.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:`<p class="ink2" style="font-size:14px">${esc(nz.text)}</p>`)+'<p class="muted" style="font-size:12.5px;margin-top:8px">Headlines collected automatically. The tone is judged from headline wording, so open the articles before acting.</p>':`<p class="ink2" style="font-size:14.5px">${esc(nz.text)}</p>${nz.url?`<p style="margin-top:8px;font-size:13.5px"><a href="${esc(nz.url)}" target="_blank" rel="noopener">Read it on ${esc(nz.src)}</a></p>`:''}${nz.more&&nz.more.length?`<p class="muted" style="font-size:12.5px;margin:12px 0 6px">Newer headlines, collected automatically</p><ul class="ul" style="gap:7px">${nz.more.slice(0,3).map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:''}`}`):`<p class="ink2" style="font-size:14px">The agent checks news for the top-ranked stocks only, and this one wasn't checked. Search before you act.</p>`}
-      ${s.filings?`<p class="muted" style="font-size:12.5px;margin:14px 0 6px">Latest stock-exchange announcements</p><ul class="ul" style="gap:7px">${s.filings.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a>${x.d?` <span class="muted" style="font-size:12.5px">${esc(x.d)}</span>`:''}</span></li>`).join('')}</ul>`:''}
-      <p style="margin-top:8px;font-size:13.5px"><a href="https://www.google.com/search?tbm=nws&q=${encodeURIComponent(s.name+' share')}" target="_blank" rel="noopener">Search the latest news</a></p></div>
-    ${fund.length?`<div class="card"><h3>Company numbers</h3><div class="kv">${fund.map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('')}</div><p class="muted" style="font-size:12.5px;margin-top:8px">Source: ${fsrc}.</p></div>`:''}
-    ${(()=>{const o=LV.open.find(x=>x.sym===s.sym),b=LV.buys.find(x=>x.sym===s.sym),g=gtt(s.close);
-      if(o)return `<div class="card"><h3>Open trade</h3><div class="kv"><span>Bought at the open on ${dlong(dd(o.buyDate))}</span><b>₹${inr(o.buy)}</b><span>GTT stop-loss trigger</span><b>₹${inr(o.stop)} <span class="down">−${Math.round(RU.stop*100)}%</span></b><span>GTT target</span><b>₹${inr(o.target)} <span class="up">+${Math.round(RU.target*100)}%</span></b><span>Sell at the open on</span><b>${fmtDayS(o.sellBy)} <span class="muted" style="font-weight:500">if neither hits</span></b></div></div>`;
-      return `<div class="card"><h3>${b?"Buy at tomorrow's open":'Not a signal today'}</h3>${b?'':`<p class="muted" style="font-size:13.5px;margin-bottom:8px">The rule buys a stock only on the evening it joins the top 30. The plan below is what it would look like at today's close.</p>`}<div class="kv"><span>Buy near</span><b>₹${inr(s.close)}</b><span>GTT stop-loss trigger</span><b>₹${inr(r2(g.stop))} <span class="down">−${Math.round(RU.stop*100)}%</span></b><span>GTT target</span><b>₹${inr(r2(g.tgt))} <span class="up">+${Math.round(RU.target*100)}%</span></b><span>Sell at the open on</span><b>${fmtDay(addBiz(D.dates[D.dates.length-1],RU.days+1))} <span class="muted" style="font-weight:500">if neither hits</span></b></div>
-      <div class="calc"><label>Your trading money ₹<input type="number" id="cap" min="0" step="10000" value="${store.get('nsaMoney',0)||''}"></label><output id="qty" for="cap"></output></div></div>`;})()}
-    ${!BT.rising?'<p class="note">The market is cautious: fewer stocks are in uptrends. In the test, skipping buys at such times did worse than buying anyway; a smaller amount is the calmer choice.</p>':''}
-    <div class="links"><a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">Live chart on TradingView</a><a href="https://www.screener.in/company/${encodeURIComponent(s.sym)}/" target="_blank" rel="noopener">Financials on Screener.in</a><a href="https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">NSE quote</a></div>
-   </div>`;
-  pc.bind(dlg);sc.bind(dlg);
-  const capI=$('#cap');if(capI){const size=()=>{const m=+capI.value||0;store.set('nsaMoney',m);const q=Math.floor(m/RU.maxpos/s.close);$('#qty').innerHTML=!m?'Type your trading money to see how many shares one trade buys.':q>0?`One trade is a fifth of your money: about <b>${q.toLocaleString('en-IN')} shares</b>, ₹${inr(q*s.close,0)}. If the stop is hit you lose about ₹${inr(q*s.close*RU.stop,0)}.`:'One share costs more than a fifth of your money.';};capI.addEventListener('input',size);size();}
-  $('#dclose').addEventListener('click',()=>dlg.close());
-  $('#wbtn').addEventListener('click',e=>{WATCH.has(s.sym)?WATCH.delete(s.sym):WATCH.add(s.sym);store.set('nsaWatch',[...WATCH]);e.target.textContent=WATCH.has(s.sym)?'On watchlist ✓':'Add to watchlist';if(st.uni==='watch')renderAll();});
-  if(!dlg.open)dlg.showModal();dlg.scrollTop=0;
-}
-dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
-
-// ---------- evidence ----------
-(function(){const sx=EV.setups||[],se=EV.seas||{},m=(BT.main||[])[0]||{},b=(BT.main||[])[2]||{};const best=sx.slice().sort((a,b)=>(b.avg||0)-(a.avg||0));
-  const SS=SBT.styles||{},m30=SS['Momentum 30 (the tested model)']||{cagr:m.cagr,dd:m.dd},bk=SS['Basket: 300 most-traded']||{cagr:b.cagr},bal=SS['Balanced']||{},per=SBT.start?`${new Date(SBT.start).toLocaleDateString('en-IN',{month:'short',year:'numeric'})} to ${new Date(SBT.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}`:'the test period';
-  const AR=ALG.results||{},pk=AR[ALG.pick]||{full:{},mood:{}},t10=AR['Momentum: monthly top 10, rebalance each month-end']||{full:{}},t20=AR['Momentum: monthly top 20, rebalance each month-end']||{full:{}},stp=AR['Momentum: monthly top 10 with a 10% stop-loss']||{full:{}},bmk=AR['Benchmark: 300 most-traded, equal weight']||{full:{}};
-  const beatBoth=Object.entries(AR).filter(([k,v])=>v.first!=null&&v.first>(bmk.full.cagr||0)&&v.second>(bmk.full.cagr||0)).map(([k])=>k);
-  const XG=(EXT&&EXT.grid)||[],gc=(tg,sp)=>(XG.find(r=>(r.target??0)===tg&&r.stop===sp)||{}).cagr,XO=(EXT&&EXT.others)||{},XF=(EXT&&EXT.stats)||{},XM=(EXT&&EXT.mood)||{};
-  const o10=XO['Same, but up to 10 trades at a time']||{},o40=XO['Same, but sell after 40 days']||{},onT=XO['Same, but no profit target']||{};
-  const items=[
-   ['Targets','var(--f1)','g-strong','Tested',`A close target cuts winners short. With a 10% target the rule made ${gc(.1,.1)}% a year and with 15% it made ${gc(.15,.1)}%, against ${gc(.2,.1)}% with 20%. Wider targets or none at all did about as well as 20% (${onT.cagr}% with no target). The stop size mattered less: 7%, 10% and 15% gave similar results.`],
-   ['Five at a time','var(--f1)','g-strong','Tested',`Five trades at a time made ${XF.cagr}% a year; ten made ${o10.cagr}%. The first five signals are the strongest stocks; later ones are weaker.`],
-   ['Time limit','var(--f2)','g-some','Tested',`Selling after ${(EXT.rule||{}).days||21} trading days made ${XF.cagr}% a year; waiting 40 days made ${o40.cagr}%. Momentum fades within about a month. Nearby limits (18 to 25 days) ranged from ${XF.range?Math.round(XF.range[0]):'–'}% to ${XF.range?Math.round(XF.range[1]):'–'}%.`],
-   ['Market mood','var(--ink2)','g-weak','Hurt returns',`Skipping new buys while fewer stocks are in uptrends cut the worst fall from ${XF.dd}% to ${XM.dd}%, but returns fell from ${XF.cagr}% to ${XM.cagr}% a year, roughly the market's. The rule keeps buying.`],
-   ['Holding longer','var(--ink2)','g-some','For comparison',`Holding the monthly top 5 with no stop-loss made ${pk.full.cagr}% a year in the same test (worst fall ${pk.full.dd}%), but it holds stocks for months. This page runs the target-and-stop rule because it exits within a month and your broker sells automatically.`]];
-  $('#ev').innerHTML=items.map(([t,c,g,gl,p])=>`<div><h3><i class="sw" style="background:${c}"></i>${t}<span class="grade ${g}">${gl}</span></h3><p>${esc(p)}</p></div>`).join('');
-  const pd=x=>new Date(x).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
-  $('#btnote').textContent=EXT.start?`Simulation from ${pd(EXT.start)} to ${pd(EXT.end)}: bought at the open after each signal, sold at the stop, the target or the open on day ${EXT.rule.days} (at the open if a stock gapped past its stop or target), 0.3% costs, on every stock that met the liquidity rule at the time. Log scale. Before tax.`:'';
-  const sg=x=>`<span class="${cls(x)}">${pct(x)}</span>`,yrs=[2022,2023,2024,2025,2026];
-  const tb=(id,cap,rows)=>{$(id).innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">${cap}</caption><thead><tr><th>Strategy</th><th>Yearly return</th><th>Worst fall</th>${yrs.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(r=>`<tr><td>${esc(r.label)}</td><td><b>${sg(r.cagr)}</b></td><td>${r.dd.toFixed(1)}%</td>${(r.years||[]).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';};
-  if(XG.length){const TG=[...new Set(XG.map(r=>r.target??0))],SP=[...new Set(XG.map(r=>r.stop))],RU_=EXT.rule;
-    $('#bt0').innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">Every target and stop tested: yearly return (worst fall), 5 trades at a time, sold after ${RU_.days} days if neither hits</caption><thead><tr><th>Target</th>${SP.map(s=>`<th>${Math.round(s*100)}% stop</th>`).join('')}</tr></thead><tbody>`+TG.map(tg=>`<tr><td>${tg?`+${Math.round(tg*100)}%`:'None'}</td>${SP.map(sp=>{const r=XG.find(x=>(x.target??0)===tg&&x.stop===sp);const me=tg===RU_.target&&sp===RU_.stop;return `<td${me?' style="background:var(--good-bg)"':''}>${r?`<b>${sg(r.cagr)}</b> <span class="muted">(${r.dd}%)</span>${me?' ← this rule':''}`:'–'}</td>`;}).join('')}</tr>`).join('')+'</tbody>';}
-  if(ALG.results){const rows=Object.entries(ALG.results).sort((a,b)=>b[1].full.cagr-a[1].full.cagr);$('#bt1').innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">Other strategy types, each as a portfolio of up to 10 stocks unless stated, ${pd(ALG.start)} to ${pd(ALG.end)}, 0.3% costs, before tax</caption><thead><tr><th>Strategy</th><th>Yearly return</th><th>Worst fall</th><th>2022–24</th><th>2025–26</th><th>With mood filter</th></tr></thead><tbody>`+rows.map(([k,v])=>`<tr><td>${esc(k.replace(" (the site's rule)",''))}</td><td><b>${sg(v.full.cagr)}</b></td><td>${v.full.dd}%</td><td>${v.first==null?'–':sg(v.first)}</td><td>${v.second==null?'–':sg(v.second)}</td><td>${v.mood?`${sg(v.mood.cagr)}, worst ${v.mood.dd}%`:'–'}</td></tr>`).join('')+'</tbody>';}
-  tb('#bt2','Does it survive changes to the settings?',BT.robust||[]);tb('#bt3','Rules that failed the same test',BT.failed||[]);
-  const c=EXT.curve?{dates:EXT.curve.dates,m30:EXT.curve.rule.map(v=>v/10),b300:EXT.curve.bench.map(v=>v/10)}:null;if(!c)return;const N=c.dates.length,EW=1000,EH=280,mm={l:6,r:70,t:10,b:22},ser=[['m30','var(--f1)','Rule'],['b300','var(--f3)','Basket']];
-  const mx=Math.max(...c.m30,...c.b300),mn=Math.min(...c.m30,...c.b300),EX=i=>mm.l+i*(EW-mm.l-mm.r)/(N-1),EY=v=>mm.t+(Math.log(mx*1.05)-Math.log(v))*(EH-mm.t-mm.b)/(Math.log(mx*1.05)-Math.log(mn*.95));
-  let g='';[8,10,15,20,30,40,50].filter(v=>v<mx*1.05&&v>mn*.95).forEach(v=>{g+=`<line x1="${mm.l}" x2="${EW-mm.r}" y1="${EY(v)}" y2="${EY(v)}" stroke="var(--grid)"/><text x="${EW-mm.r+6}" y="${EY(v)+4}">₹${v} lakh</text>`;});
-  let xt='',ly='';c.dates.forEach((d,i)=>{const y=d.slice(0,4);if(y!==ly&&i>2)xt+=`<text x="${EX(i)}" y="${EH-6}" text-anchor="middle">${y}</text>`;ly=y;});
-  $('#eqc').innerHTML=`<svg viewBox="0 0 ${EW} ${EH}" role="img" aria-label="Growth of 10 lakh rupees traded with the 20% target, 10% stop rule against an equal-weight basket of the 300 most-traded stocks">${g}${xt}${ser.map(([k,col])=>`<path d="${c[k].map((v,i)=>(i?'L':'M')+EX(i).toFixed(1)+' '+EY(v).toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/><circle cx="${EX(N-1)}" cy="${EY(c[k][N-1])}" r="4" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`).join('')}<line id="ex" y1="${mm.t}" y2="${EH-mm.b}" stroke="var(--line2)" visibility="hidden"/></svg>`;
-  const es=$('#eqc svg'),et=$('#eqtip'),ex=$('#ex');
-  es.addEventListener('pointermove',e=>{const r=es.getBoundingClientRect(),box=es.parentElement.parentElement.getBoundingClientRect();let i=Math.round(((e.clientX-r.left)*EW/r.width-mm.l)*(N-1)/(EW-mm.l-mm.r));i=Math.max(0,Math.min(N-1,i));ex.setAttribute('x1',EX(i));ex.setAttribute('x2',EX(i));ex.setAttribute('visibility','visible');
-    et.innerHTML=`<b>${new Date(c.dates[i]).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</b><br>Rule: ₹${c.m30[i].toFixed(1)} lakh<br>Basket: ₹${c.b300[i].toFixed(1)} lakh`;et.style.display='block';let l=e.clientX-box.left+14;if(l+210>box.width)l-=230;et.style.left=l+'px';et.style.top=(e.clientY-box.top-20)+'px';});
-  es.addEventListener('pointerleave',()=>{et.style.display='none';ex.setAttribute('visibility','hidden');});
+  $('#chartnote').innerHTML=`Simulated from ${pd(X.start)} to ${pd(X.end)} on every stock that met the rules at the time: bought at the next open, sold at the target, the stop-loss (or the open, if a stock gapped past it) or on day ${R.days}, with 0.3% costs per trade, before tax. Log scale. By year: ${Object.entries(F.years).map(([y,v])=>`${y} <b class="${cls(v)}">${pct(v,0)}</b>`).join(', ')}${X.end?` (to ${dshort(X.end)})`:''}.`;
 })();
+const T=(HIST.trades||[]).slice().reverse(),done=T.filter(x=>x.ret!=null);
+$('#livesum').textContent=`Live record since ${HIST.since?dlong(HIST.since):'launch'}: ${T.length?`${T.length} trades, ${done.length} closed${done.length?`, average ${pct(done.reduce((a,x)=>a+x.ret,0)/done.length)}`:''}`:'starts with the next buy signal'}`;
+$('#live').innerHTML=T.length?`<table><thead><tr><th>Stock</th><th>Bought</th><th class="r">Price</th><th>Result</th><th class="r">Return</th></tr></thead><tbody>${T.map(x=>`<tr><td>${esc(x.sym)}</td><td>${dshort(x.buy)}</td><td class="r">${x.price?'₹'+inr(x.price):'–'}</td><td>${x.why?WHY[x.why]+', '+dshort(x.sell):'Open'}</td><td class="r">${x.ret==null?'–':`<b class="${cls(x.ret)}">${pct(x.ret)}</b>`}</td></tr>`).join('')}</tbody></table><p class="note">Recorded by the nightly job at the rule's own prices, after 0.3% costs.</p>`:'<p class="note">Every trade this page signals is recorded here from the first live signal, so you can see how it does in real time.</p>';
+const TL=(X.trades||[]).slice().reverse();
+$('#recsum').textContent=`Last ${TL.length} trades in the test: ${TL.filter(x=>x.ret>0).length} made money`;
+$('#recent').innerHTML=`<table><thead><tr><th>Stock</th><th>Bought</th><th>Result</th><th class="r">Days</th><th class="r">Return</th></tr></thead><tbody>${TL.map(x=>`<tr><td>${esc(x.sym)}</td><td>${dshort(x.buy)} ${x.buy.slice(0,4)}</td><td>${WHY[x.why]}</td><td class="r">${x.days}</td><td class="r"><b class="${cls(x.ret)}">${pct(x.ret)}</b></td></tr>`).join('')}</tbody></table>`;
 
-// ---------- live track record ----------
-(function(){const T_=(HIST.trades||[]).slice().reverse(),done=T_.filter(x=>x.ret!=null),wy={target:'hit the target',stop:'hit the stop',time:'sold on day 21'};
-  const sum=done.length?`${done.length} closed: ${done.filter(x=>x.ret>0).length} winners, average ${pct(done.reduce((a,x)=>a+x.ret,0)/done.length)} a trade before tax.`:'';
-  $('#track').innerHTML=`<h3>Live track record</h3><p class="muted" style="font-size:13px;margin-top:4px">Every trade this page signals from ${HIST.since?dlong(dd(HIST.since)):'launch'} on, recorded by the nightly job at the rule's own prices, after 0.3% costs. ${sum}</p>`+
-   (T_.length?`<div style="overflow-x:auto"><table class="bt"><thead><tr><th>Stock</th><th>Bought</th><th>Price</th><th>Sold</th><th>How</th><th>Return</th></tr></thead><tbody>${T_.map(x=>`<tr><td>${esc(x.sym)}</td><td>${dlong(dd(x.buy))}</td><td>₹${inr(x.price)}</td><td>${x.sell?dlong(dd(x.sell)):'Open'}</td><td>${x.why?wy[x.why]:'–'}</td><td>${x.ret==null?'–':`<b class="${cls(x.ret)}">${pct(x.ret)}</b>`}</td></tr>`).join('')}</tbody></table></div>`:'<p class="ink2" style="font-size:14px;margin-top:10px">The first live trade is the next buy signal.</p>');
-})();
-
-renderAll();
+// ---------- why ----------
+const I=IDEAS.ideas||{},me=Object.keys(I).find(k=>k.includes("this site's rule")),bt=(IDEAS.bench||{}),nIdeas=Object.keys(I).length;
+$('#whytext').innerHTML=`<p>${nIdeas||'About 20'} stock-picking ideas were tested on NSE prices from ${IDEAS.train?dlong(IDEAS.train[0]):'Sep 2022'}: pullbacks, breakouts, 52-week highs, MACD, Bollinger squeezes, golden crosses, strong sectors, gap-ups, delivery surges and several kinds of momentum. For each, the target, stop-loss, holding time and number of trades were chosen using 2022–24 only, then checked on 2025–26, which played no part in choosing them.</p>
+ <p style="margin-top:10px">${me?`This rule made ${I[me].train.cagr}% a year in 2022–24 and <b>${I[me].test.cagr}% a year in the 2025–26 check</b>, when the market made ${bt.test?bt.test.cagr:'–'}%. That was the best check result, and similar settings also did well.`:''} Most chart patterns that looked good in 2022–24, when almost everything rose, lost money in 2025–26. The one pattern that held up: stocks that have been the strongest over the past year tend to keep going for a few more weeks. Not every time: it works across many trades, not on each one.</p>
+ <p style="margin-top:10px">The test covers about four years and the result depends on the settings, so treat ${Math.round(Math.min(...(F.range||[F.cagr])))}–${Math.round(Math.max(...(F.range||[F.cagr])))}% a year as the realistic range, not a promise.</p>`;
+const rows=Object.entries(I).sort((a,b)=>b[1].test.cagr-a[1].test.cagr);
+$('#ideas').innerHTML=`<table><thead><tr><th>Idea</th><th class="r">2022–24</th><th class="r">2025–26 check</th></tr></thead><tbody>${rows.map(([k,v])=>`<tr${k===me?' class="me"':''}><td>${esc(k)}</td><td class="r">${pct(v.train.cagr)}</td><td class="r"><b class="${cls(v.test.cagr)}">${pct(v.test.cagr)}</b></td></tr>`).join('')}<tr><td>The market: 300 most-traded stocks, equal amounts</td><td class="r">${bt.train?pct(bt.train.cagr):'–'}</td><td class="r">${bt.test?pct(bt.test.cagr):'–'}</td></tr></tbody></table><p class="note">Yearly return of each idea as a portfolio with its own best 2022–24 settings, after 0.3% costs per trade, before tax.</p>`;
 })();
 </script>
 </body>
