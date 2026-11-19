@@ -117,7 +117,7 @@ ISME = np.array([d_ in me for d_ in dates])
 def fresh(cond, k=20):
     return cond & ~(cond.rolling(k, min_periods=1).max().shift(1).fillna(0).astype(bool))
 
-def sim(entry, prio, target=None, stop=.08, days=30, maxpos=5, lo=None, hi=None, mood=False, rebalance=None):
+def sim(entry, prio, target=None, stop=.08, days=30, maxpos=5, lo=None, hi=None, mood=False, rebalance=None, every=None, filt=None, log=None):
     lo = START if lo is None else lo; hi = n - 1 if hi is None else hi
     Ev = None if entry is None else entry.reindex(index=dates, columns=C.columns).fillna(False).values
     Pv = prio.reindex(index=dates, columns=C.columns).values
@@ -133,7 +133,9 @@ def sim(entry, prio, target=None, stop=.08, days=30, maxpos=5, lo=None, hi=None,
             elif target and i > p['bi'] and np.isfinite(o) and o >= p['tgt']: px, r = o, 'target'
             elif target and np.isfinite(h) and h >= p['tgt']: px, r = p['tgt'], 'target'
             if px is not None:
-                cash += p['sh'] * px * (1 - COST); trades.append(px / p['e'] - 1 - 2 * COST); why.append(r); del pos[j]
+                cash += p['sh'] * px * (1 - COST); trades.append(px / p['e'] - 1 - 2 * COST); why.append(r)
+                if log is not None: log.append((C.columns[j], str(dates[p['bi']].date()), str(dates[i].date()), r, round((px / p['e'] - 1) * 100, 1), round(float(p['e']), 2), round(float(px), 2)))
+                del pos[j]
         if pend:
             for j in pend:
                 if len(pos) >= maxpos: break
@@ -149,7 +151,11 @@ def sim(entry, prio, target=None, stop=.08, days=30, maxpos=5, lo=None, hi=None,
         eq.append(eqv)
         pend = []
         if rebalance:
-            if ISME[i]:
+            review = ISME[i] if not every else ((i - lo) % every == every - 1)
+            if review and filt is not None and not filt[i]:
+                for p in pos.values(): p['sell_open'] = True
+                continue
+            if review:
                 pr = Pv[i]; ok = np.isfinite(pr)
                 tgt = set(np.argsort(-np.where(ok, pr, -np.inf))[:rebalance][:ok.sum()])
                 for j, p in pos.items():
@@ -235,6 +241,35 @@ if __name__ == '__main__':
         others[k_] = dict(s3, periods=pp)
         print(f"{k_:80s} {s3['cagr']:6.1f}% worst {s3['dd']:6.1f}% | periods {pp}", flush=True)
     out['others'] = others
+    # ---- diagnostics: the worst trades, to spot data errors ----
+    lg = []; sim(F50, PR, .20, .08, 30, 5, log=lg)
+    lg.sort(key=lambda r: r[4])
+    print('\nWORST 25 TRADES of the site rule (sym, bought, sold, exit, % move, buy, sell):')
+    for r in lg[:25]: print('  ', r)
+    big = [r for r in lg if r[4] < -25]; print('trades losing more than 25%:', len(big), 'of', len(lg))
+    out['worst_trades'] = lg[:40]
+    lg2 = []; sim(None, PR, None, None, None, 5, rebalance=5, log=lg2); lg2.sort(key=lambda r: r[4])
+    print('WORST 15 HOLDINGS of the monthly top 5:'); [print('  ', r) for r in lg2[:15]]
+    hold_days = [ (pd.Timestamp(r[2]) - pd.Timestamp(r[1])).days for r in lg2 ]
+    print('monthly top 5: holdings', len(lg2), 'median calendar days held', float(np.median(hold_days)), 'share held under 45 days', round(float(np.mean(np.array(hold_days) < 45)) * 100))
+    # ---- holding the strongest, with market filters ----
+    bidx = (1 + bret).cumprod(); TREND = (bidx > bidx.rolling(200, min_periods=150).mean()).values
+    MOODF = UP
+    HV = {}
+    for N_ in (3, 5, 10, 20):
+        for ev, evl in ((None, 'monthly'), (10, 'every 2 weeks')):
+            for fl, fll in ((None, 'always invested'), (TREND, 'cash when the market is below its 200-day average'), (MOODF, 'cash when breadth is falling')):
+                kw = dict(target=None, stop=None, days=None, maxpos=N_, rebalance=N_, every=ev, filt=fl)
+                e4, t4, _ = sim(None, PR, **kw); s4 = stats(e4, t4)
+                pp = []
+                for lab, a_, b_ in PERIODS:
+                    lo, hi = max(START, idx(a_)), min(n - 1, idx(b_) - 1 if idx(b_) < n else n - 1)
+                    if hi - lo < 100: continue
+                    pp.append(stats(sim(None, PR, lo=lo, hi=hi, **kw)[0])['cagr'])
+                k_ = f'Top {N_}, {evl}, {fll}'
+                HV[k_] = dict(s4, periods=pp)
+                print(f"{k_:85s} {s4['cagr']:6.1f}% worst {s4['dd']:6.1f}% sharpe {s4['sharpe']} | periods {pp}", flush=True)
+    out['holding'] = HV
     # walk-forward contest: each idea's settings chosen on 2007-2016, then checked on 2017-2026
     MID = idx('2017-01-01')
     if MID - START > 500:

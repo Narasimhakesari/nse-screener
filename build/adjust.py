@@ -29,7 +29,8 @@ def _yahoo(sym, cache, need_after):
     if c and c.get('ok') and c.get('fetched', '') >= need_after: return c
     if sym in _TRIED: return _TRIED[sym]
     try:
-        import yfinance as yf
+        import yfinance as yf, logging
+        logging.getLogger('yfinance').setLevel(logging.CRITICAL)
         s = yf.Ticker(sym + '.NS').splits
         h = yf.Ticker(sym + '.NS').history(period='5d') if s is None or len(s) == 0 else None
         ok = (s is not None and len(s) > 0) or (h is not None and len(h) > 0)
