@@ -1,0 +1,49 @@
+name: Options strategies test (15 years)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'build/options_15y.py'
+      - '.github/workflows/options.yml'
+permissions:
+  contents: write
+concurrency:
+  group: options
+  cancel-in-progress: true
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy
+      - name: Restore the filtered NSE F&O daily files
+        uses: actions/cache/restore@v4
+        with:
+          path: wd/fo
+          key: fo-${{ github.run_id }}
+          restore-keys: fo-
+      - name: Download and test
+        run: |
+          mkdir -p wd
+          set -o pipefail
+          python build/options_15y.py wd 2>&1 | grep -v Warning | tee options_log.txt
+          cp wd/options_bt.json options_bt.json
+      - name: Keep the filtered files for next time
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: wd/fo
+          key: fo-${{ github.run_id }}
+      - name: Commit the results
+        if: always()
+        run: |
+          git config user.name "screener-bot"
+          git config user.email "screener-bot@users.noreply.github.com"
+          for f in options_log.txt options_bt.json; do [ -f "$f" ] && git add "$f"; done
+          git diff --cached --quiet || git commit -m "Options test results"
+          git pull --rebase origin main
+          git push
