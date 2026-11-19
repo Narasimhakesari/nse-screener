@@ -1,13 +1,9 @@
 name: NIFTY weekly trade (nightly)
 on:
-  schedule:
-    - cron: '17 15 * * 1-5'   # 8:47 pm IST, Monday to Friday, after NSE's F&O file is out
+  # Paused on 19 Nov 2026 at the owner's request. Re-enable by restoring:
+  # schedule:
+  #   - cron: '17 15 * * 1-5'   # 8:47 pm IST, Monday to Friday
   workflow_dispatch:
-  push:
-    paths:
-      - 'build/options_daily.py'
-      - 'build/options_notify.py'
-      - '.github/workflows/options_daily.yml'
 permissions:
   contents: write
 concurrency:

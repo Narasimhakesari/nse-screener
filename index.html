@@ -160,6 +160,11 @@ const applyTheme=t=>{if(t)document.documentElement.dataset.theme=t;else delete d
 applyTheme(store.get('nsaTheme',null));
 $('#theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;const t=dark?'light':'dark';store.set('nsaTheme',t);applyTheme(t);});
 const L=await fetch('options_live.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+if(true){ // paused
+  $('#hdate').textContent='Paused on 19 November 2026';
+  $('#headline').textContent='This page is paused';
+  $('#lede').innerHTML='There are no new trades, no nightly updates and no alerts. Do not trade from it. The tests behind it are in options_log.txt and README.md in this repository.';
+  document.querySelectorAll('section').forEach(s=>s.hidden=true);$('#asof').textContent='';return;}
 if(!L||!L.week){$('#headline').textContent='The data did not load';$('#lede').textContent='Reload in a minute; the evening refresh may be running.';return;}
 const W=L.week,lot=W.lot,wing=L.rule.wing;
 $('#asof').innerHTML=`NSE close<br>${dlong(L.asof)}`;
