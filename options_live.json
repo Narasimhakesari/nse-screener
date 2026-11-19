@@ -1,0 +1,89 @@
+{
+ "built": "2026-11-19T13:26Z",
+ "asof": "2026-11-18",
+ "rule": {
+  "entry_days_before": 2,
+  "wing": 0.04,
+  "time": "3:15 pm",
+  "symbol": "NIFTY"
+ },
+ "week": {
+  "expiry": "2026-11-23",
+  "entry": "2026-11-19",
+  "state": "tomorrow",
+  "spot": 25227.95,
+  "lot": 65,
+  "strikes": {
+   "atm": 25250.0,
+   "call_wing": 26250.0,
+   "put_wing": 24200.0
+  },
+  "legs": [
+   {
+    "action": "Sell",
+    "typ": "CE",
+    "k": 25250.0,
+    "price": 161.45
+   },
+   {
+    "action": "Sell",
+    "typ": "PE",
+    "k": 25250.0,
+    "price": 170.0
+   },
+   {
+    "action": "Buy",
+    "typ": "CE",
+    "k": 26250.0,
+    "price": 4.95
+   },
+   {
+    "action": "Buy",
+    "typ": "PE",
+    "k": 24200.0,
+    "price": 4.4
+   }
+  ],
+  "credit": 322.1,
+  "width": 1050.0,
+  "max_profit": 20936,
+  "max_loss": 47314,
+  "entered": null
+ },
+ "record": [],
+ "live_since": "2026-11-20",
+ "tested": {
+  "stockmock": [
+   {
+    "period": "Mar 2019 \u2013 Dec 2022 (includes the 2020 crash)",
+    "profit": 99791,
+    "worst_week": -22373,
+    "worst_fall": -94168,
+    "win": 56,
+    "margin": 156000
+   },
+   {
+    "period": "Jan 2023 \u2013 Nov 2026",
+    "profit": 107782,
+    "worst_week": -36881,
+    "worst_fall": -82846,
+    "win": 60,
+    "margin": 156000
+   }
+  ],
+  "unhedged": [
+   {
+    "period": "Mar 2019 \u2013 Dec 2022",
+    "profit": 193009,
+    "worst_week": -42860,
+    "worst_fall": -79088
+   },
+   {
+    "period": "Jan 2023 \u2013 Nov 2026",
+    "profit": 187734,
+    "worst_week": -36009,
+    "worst_fall": -75990
+   }
+  ]
+ }
+}
