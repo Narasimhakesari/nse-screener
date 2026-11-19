@@ -13,6 +13,7 @@ on:
       - 'build/backtest_algos.py'
       - 'build/backtest_exits.py'
       - 'build/backtest_ideas.py'
+      - 'build/adjust.py'
       - '.github/workflows/refresh.yml'
 permissions:
   contents: write
@@ -73,7 +74,7 @@ jobs:
           git config user.name "screener-bot"
           git config user.email "screener-bot@users.noreply.github.com"
           git add data.json
-          for f in auto.json styles_bt.json algos_bt.json exits_bt.json ideas_bt.json history.json; do [ -f "$f" ] && git add "$f"; done
+          for f in auto.json styles_bt.json algos_bt.json exits_bt.json ideas_bt.json history.json splits.json; do [ -f "$f" ] && git add "$f"; done
           git diff --cached --quiet || git commit -m "Refresh data"
           git pull --rebase origin main
           git push

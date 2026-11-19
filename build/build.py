@@ -30,11 +30,8 @@ try: etf=set(pd.read_csv(f"{WD}/etf.csv",skipinitialspace=True).iloc[:,0].astype
 except Exception: etf=set()
 rx=re.compile(r'ETF|BEES|NIFTY|GOLD|SILVER|LIQUID|SENSEX|GILT|NV20|N100|NASDAQ|GSEC|CPSE|BBETF|SDL|HNGSNG|MAFANG|MON100|SML100|MID150|SMALL250|LOWVOL|MOMENTUM|ALPHA$|CASE$|ADD$|1D$|\dIETF')
 a=a[~a.SYMBOL.isin(etf)&~a.SYMBOL.map(lambda s:bool(rx.search(s)))].sort_values(['SYMBOL','DATE1'])
-r=a.CLOSE_PRICE/a.groupby('SYMBOL').CLOSE_PRICE.shift(); STD=np.array([1.25,4/3,1.5,2,2.5,3,4,5,6,10,11])
-def snap(x):
-    if not x<0.75: return 1.0
-    j=STD[np.argmin(np.abs(1/STD-x))]; return float(j) if abs(1/j-x)/x<0.06 else 1/x
-a['k']=r.map(snap); a['f']=a.groupby('SYMBOL').k.transform(lambda x:x[::-1].cumprod()[::-1].shift(-1).fillna(1.0))
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__))); from adjust import factors, STD
+a=a.reset_index(drop=True); a['k']=factors(pd.DataFrame(dict(SYMBOL=a.SYMBOL,DATE=a.DATE1,C=a.CLOSE_PRICE,TO=a.TURNOVER_LACS)),use_yahoo=not os.environ.get('NO_YAHOO')); a['f']=a.groupby('SYMBOL').k.transform(lambda x:x[::-1].cumprod()[::-1].shift(-1).fillna(1.0))
 ADJ={}
 for s,dte,k in a.loc[a.k!=1,['SYMBOL','DATE1','k']].itertuples(index=False):
     std=np.min(np.abs(STD-k))<1e-9; ADJ.setdefault(s,[]).append(f"{dte:%d %b %Y} ÷{k:.3g}"+('' if std else ' (non-standard, possible demerger or crash)'))
