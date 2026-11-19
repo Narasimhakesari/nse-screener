@@ -1,0 +1,56 @@
+name: NIFTY weekly trade (nightly)
+on:
+  schedule:
+    - cron: '17 15 * * 1-5'   # 8:47 pm IST, Monday to Friday, after NSE's F&O file is out
+  workflow_dispatch:
+  push:
+    paths:
+      - 'build/options_daily.py'
+      - 'build/options_notify.py'
+      - '.github/workflows/options_daily.yml'
+permissions:
+  contents: write
+concurrency:
+  group: options-daily
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy
+      - name: Restore recent NSE F&O files
+        uses: actions/cache/restore@v4
+        with:
+          path: wd/fo_live
+          key: folive-${{ github.run_id }}
+          restore-keys: folive-
+      - name: This week's trade and the live record
+        run: |
+          mkdir -p wd
+          python build/options_daily.py wd
+      - name: Alerts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: python build/options_notify.py
+      - name: Keep the F&O files
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: wd/fo_live
+          key: folive-${{ github.run_id }}
+      - name: Commit
+        run: |
+          git config user.name "screener-bot"
+          git config user.email "screener-bot@users.noreply.github.com"
+          for f in options_live.json options_alerts.json; do [ -f "$f" ] && git add "$f"; done
+          git diff --cached --quiet || git commit -m "NIFTY weekly trade: refresh"
+          git pull --rebase origin main
+          git push

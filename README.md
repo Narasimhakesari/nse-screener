@@ -1,29 +1,39 @@
-# NSE Stock Agent: tonight's trades
+# NIFTY weekly trade
 
-A one-page website that runs one tested trading rule on NSE stocks and updates itself every weekday night (GitHub Actions, after 8:30 pm IST).
+The site (index.html) shows one tested NIFTY weekly options trade, updated every weekday evening by
+`.github/workflows/options_daily.yml` from NSE's daily F&O file (`build/options_daily.py` -> `options_live.json`).
 
-**The rule**
-- **Buy:** each evening, find stocks that have just entered the top 50 of the 300 most-traded NSE stocks by 12-month momentum (return from 12 months ago to 1 month ago, divided by volatility). "Just entered" means not in the top 50 in the 20 trading days before. Buy at the next open, strongest first.
-- **Size:** at most 5 trades at a time, one fifth of your money each.
-- **Exit:** right after buying, place one Zerodha GTT OCO order:
-  - stop-loss trigger at the buy price −8% (market order with protection);
-  - target at +20% (limit order).
-- **Time limit:** if neither hits in 30 trading days, sell at the open and delete the GTT.
+**The trade.** On the 2nd trading day before each NIFTY weekly expiry, at about 3:15 pm: buy a call about 4% above
+NIFTY and a put about 4% below (protection), then sell the at-the-money call and put, 1 lot each. Hold until 3:15 pm on
+expiry day and close all four. No stop-loss; the protective legs cap the loss.
 
-**How it was chosen** (`build/backtest_ideas.py`, re-run nightly into `ideas_bt.json`). Eighteen stock-picking ideas were tested: pullbacks, base breakouts, 52-week highs, NR7, MACD, Bollinger squeezes, golden crosses, strong sectors, gap-ups, delivery surges and 3-, 6- and 12-month momentum.
-- Each idea ran as a real portfolio: buys at the next open; the stop filled at the stop or at the open on a gap, and the target likewise; 0.3% costs per round trip.
-- Each idea's target, stop, holding time and number of trades were chosen on Sep 2022 to Dec 2024 only.
-- Those settings were then checked on 2025–26, which played no part in choosing them.
+**How it was chosen.**
+- `build/options_15y.py`, run by `.github/workflows/options.yml`, tested 12 families of NIFTY and BANKNIFTY option strategies on NSE daily files from 2011 to 2026. Results are in `options_log.txt`.
+  - Each family's settings were chosen on the earlier years, then checked on the later years.
+  - Only weekly selling 2 days before expiry held up.
+  - Monthly selling, iron condors, credit and debit spreads, and every form of option buying did not.
+- The result was confirmed on Stockmock's minute data. Per NIFTY lot, after its 0.5% slippage:
 
-This rule had the best check result: 24% a year in 2025–26, when the market (the 300 most-traded stocks, equal weight) made 5.5%. Over the full period it made about 30% a year against 18%, with a worst fall of about −31%. Similar settings gave roughly 17–31% a year. About half the trades lose money; 22% reach the +20% target.
+| Version | Margin | Mar 2019 – Dec 2022 profit / worst week / worst fall | Jan 2023 – Nov 2026 |
+|---|---|---|---|
+| With 4% protective buys (this site) | ~Rs 1.56 L | Rs 99,791 / -22,373 / -94,168 | Rs 1,07,782 / -36,881 / -82,846 |
+| Without protective buys | ~Rs 2.65 L | Rs 1,93,009 / -42,860 / -79,088 | Rs 1,87,734 / -36,009 / -75,990 |
 
-Most chart patterns did well in 2022–24 and lost money in 2025–26. Adding a 52-week-high breakout to momentum made results worse.
+**What the protective buys do.**
+- They cost about half the profit, because NIFTY rarely moved 4% in 2 days.
+- They are insurance against a crash larger than anything in 2019–2026; without them that loss is unlimited.
+- Strikes further out (5–6%) often did not trade.
 
-Figures are before the 20% tax on short-term gains. The test covers about four years. Not investment advice.
+**Before trading it.**
+- F&O profits are business income, taxed at your slab rate.
+- About 9 in 10 individual F&O traders lose money (SEBI).
 
-Other files:
-- `build/backtest_exits.py` runs the live rule each night into `exits_bt.json`: open trades, tomorrow's buys, the growth curve.
-- `build/backtest_algos.py` is an older strategy contest.
+Not investment advice.
+
+Alerts: `build/options_notify.py` messages the evening before the entry day, on the entry evening and on expiry
+evening, using the repository secrets below.
+
+The earlier stock pages are paused (stocks.html; `build/backtest_20y.py` and `long_log.txt` show why).
 
 ## Alerts (optional)
 `build/notify.py` records every trade the page signals in `history.json` (the page's live record). It sends a message on evenings with something to do:
