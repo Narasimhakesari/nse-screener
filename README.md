@@ -1,29 +1,30 @@
-# NSE Stock Agent: hold the 5 strongest NSE stocks
+# NSE Stock Agent: momentum trades with a 20% target and a 10% stop
 
-A static website that runs one tested rule on NSE stocks and updates itself every weekday night.
+A static website that runs one tested trading rule on NSE stocks and updates itself every weekday night.
 
-**The rule.** On the last trading day of each month, after the close, rank the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by their 12-month return skipping the last month, divided by volatility. Hold the top 5 in equal amounts. At the next open, sell any holding that left the top 5 and buy the new ones. No stop-loss.
+**The rule.** Each evening, find stocks that have just entered the top 30 of the 300 most-traded NSE stocks (price Rs 10 or more, a year of history) by momentum: 12-month return skipping the last month, divided by volatility. "Just entered" means not in the top 30 in the 20 trading days before. Buy the strongest at the next open, at most 5 trades at a time, one fifth of your money each. Right after buying, place a Zerodha GTT OCO order: stop-loss trigger at the buy price −10%, target at +20%. Your broker sells automatically when either is hit. If neither is hit in 21 trading days, sell at the open on day 21 and delete the GTT.
 
-**Why this rule** (`build/backtest_algos.py`, re-run nightly into `algos_bt.json`): 11 strategy types were run as real portfolios with the same rules (at most 10 positions unless stated, next-open trades, gaps through stops filled at the open, 0.3% costs, textbook settings). From Sep 2022 to Nov 2026, before tax:
+**Why this rule** (`build/backtest_exits.py`, re-run nightly into `exits_bt.json`; `--grid` runs the full search). About 540 combinations were run as real portfolios from Sep 2022 to Nov 2026. They covered two entries (newly entered the top 30, or in the top 10), 5 or 10 trades at a time, targets from 8% to 40% or none, stops from 5% to 15% or trailing, and time limits of 21, 40 or 60 days. Buys were at the next open; the stop filled at the stop price or at the open if the stock gapped below it, and the target likewise; if both were touched in one day the stop was assumed to hit first; costs were 0.3% per round trip.
 
-| Strategy | Yearly return | Worst fall |
-|---|---|---|
-| Momentum, monthly top 5 (this rule) | 38.9% | −33% |
-| Momentum, monthly top 10 | 31.1% | −39% |
-| Momentum, monthly top 20 | 28.3% | −30% |
-| Momentum, daily fresh top-30 entries, 21 days, 10% stop | 21.4% | −36% |
-| Momentum, monthly top 10 with a 10% stop | 20.5% | −35% |
-| Benchmark: 300 most-traded, equal weight | 18.1% | −24% |
-| Trend crossover, low volatility, 52-week breakout, RSI(2) mean reversion, 5-day reversal, delivery surge, volume-spike drift, 50-day breakout with target/stop, buying dips in leaders | −1% to 30%, none beat the market in both halves | |
+| Result (before tax) | Value |
+|---|---|
+| Yearly return | about 29% (26–36% with time limits of 18–25 days) |
+| 300 most-traded stocks, equal weight | 18% |
+| Worst fall | about −36% |
+| Trades hitting the target / the stop / sold on day 21 | 17% / 24% / 59% |
+| 2022–24 / 2025–26 | 29% vs the market's 30% / 33% vs 5.5% |
 
-Only momentum strategies beat the market in both halves of the period (before and after 1 Jan 2025). Stop-losses lowered momentum returns. Holding cash at month-ends when market breadth is falling cut the top-5 rule's worst fall to about −19% but its return to about 24% a year; the page shows this as a choice. Short-term capital gains on listed shares are taxed at 20%, which these figures do not include. The test covers about four years, including the strong 2023; past results do not predict future ones.
+What the search showed:
+- Close targets (8–15%) cut winners short and earned under 20% a year.
+- Targets of 20% or more, or no target, did about equally well.
+- The stop size (7–15%) mattered little.
+- Five trades at a time beat ten.
+- Skipping buys while market breadth is falling cut the return to about 11% a year.
 
-Earlier tests kept in the repo: `build/backtest_styles.py` (blended scores), `build/backtest_trades.py` (swing setups with target/stop), `build/backtest_momentum.py` and `build/backtest_daily_momentum.py` (momentum trades with stops).
-
-Not investment advice.
+For comparison, holding the monthly top 5 with no stop made 39% a year in the same period (`build/backtest_algos.py`, the strategy contest in `algos_bt.json`), but it holds stocks for months. Short-term capital gains on listed shares are taxed at 20%, which these figures do not include. The test covers about four years, and the exact figure depends on the settings, so expect a range. Not investment advice.
 
 ## Alerts (optional)
-`build/notify.py` keeps the live record of each review in `history.json` (the page's live track record) and sends a message on review evenings (what to sell and buy at the next open), when the market mood changes, and every Friday (the five holdings, flagging any that would be swapped if the review were that day). Add repository secrets (Settings → Secrets and variables → Actions):
+`build/notify.py` records every trade the rule signals in `history.json` (the page's live track record). It sends a message on evenings with something to do: what to buy at the next open, with its GTT stop and target prices; what to sell because its 21 days are up; and which trades hit the target or stop that day. It also sends a message when the market mood changes, and a summary every Friday. Add repository secrets (Settings → Secrets and variables → Actions):
 - Telegram: `TELEGRAM_BOT_TOKEN` (create a bot with @BotFather) and `TELEGRAM_CHAT_ID` (send your bot a message, then open `https://api.telegram.org/bot<token>/getUpdates` and copy `chat.id`).
 - Or the free ntfy app: `NTFY_TOPIC`, any long private name you also subscribe to in the app.
 

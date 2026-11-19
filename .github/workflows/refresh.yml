@@ -11,6 +11,7 @@ on:
       - 'build/build.py'
       - 'build/backtest_styles.py'
       - 'build/backtest_algos.py'
+      - 'build/backtest_exits.py'
       - '.github/workflows/refresh.yml'
 permissions:
   contents: write
@@ -50,6 +51,7 @@ jobs:
         run: |
           python build/backtest_styles.py wd && cp wd/styles_bt.json styles_bt.json
           python build/backtest_algos.py wd > /dev/null && cp wd/algos_bt.json algos_bt.json
+          python build/backtest_exits.py wd && cp wd/exits_bt.json exits_bt.json
       - name: Fetch news headlines and company numbers for the top-ranked stocks
         continue-on-error: true
         timeout-minutes: 35
@@ -69,7 +71,7 @@ jobs:
           git config user.name "screener-bot"
           git config user.email "screener-bot@users.noreply.github.com"
           git add data.json
-          for f in auto.json styles_bt.json algos_bt.json history.json; do [ -f "$f" ] && git add "$f"; done
+          for f in auto.json styles_bt.json algos_bt.json exits_bt.json history.json; do [ -f "$f" ] && git add "$f"; done
           git diff --cached --quiet || git commit -m "Refresh data"
           git pull --rebase origin main
           git push

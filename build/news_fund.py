@@ -30,7 +30,13 @@ def pick_list(D, n_top=50):
         if not (s.get('liq300') and s['close'] > s['s200']): continue
         rows.append((sum(W[k] * (s.get(k) if s.get(k) is not None else 50) for k in W) / sum(W.values()), s))
     rows.sort(key=lambda r: -r[0])
-    out = {s['sym']: s for _, s in rows[:n_top]}
+    out, BYS = {}, {s['sym']: s for s in D['stocks']}
+    try:   # the stocks in the target/stop trades come first, so they always get news and company numbers
+        L = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'exits_bt.json')))['live']
+        for x in L.get('buys', []) + L.get('open', []) + L.get('queue', []):
+            if x['sym'] in BYS: out.setdefault(x['sym'], BYS[x['sym']])
+    except Exception: pass
+    for _, s in rows[:n_top]: out.setdefault(s['sym'], s)
     for s in D['stocks']:
         if s.get('mrank') and s['mrank'] <= 30: out.setdefault(s['sym'], s)
     return list(out.values())
