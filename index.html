@@ -238,6 +238,11 @@ $('#theme').addEventListener('click',()=>{const dark=document.documentElement.da
 
 const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
 const [D,X,AUTO,HIST,IDEAS]=await Promise.all(['data.json','exits_bt.json','auto.json','history.json','ideas_bt.json'].map(get));
+if(true){ // paused
+  $('#hdate').textContent='Paused on 19 November 2026';
+  $('#headline').textContent='This page is paused';
+  $('#lede').innerHTML='Its trading rule (buy stocks newly in the momentum top 50, sell at +20% or −8%, or after 30 days) did well from 2021 to 2026 but failed a 20-year test: <b>3.7% a year from 2007 to 2026, against 10.1% for the market</b>, with losses in each of 2007–10, 2011–15 and 2016–20. There are no new signals and no alerts. Do not trade from it. The full test is in long_log.txt in this repository.';
+  document.querySelectorAll('section').forEach(s=>s.hidden=true);$('#slots').hidden=true;$('#asof').textContent='';return;}
 if(!X.live||!D.stocks){$('#headline').textContent='The data did not load';$('#lede').textContent='Reload the page in a minute; the nightly refresh may be updating it.';return;}
 const BY=Object.fromEntries(D.stocks.map(s=>[s.sym,s]));
 const L=X.live,R=X.rule,F=X.stats,B=X.bench,TP=Math.round(R.target*100),SP=Math.round(R.stop*100);

@@ -1,20 +1,9 @@
 name: Refresh screener data
 on:
-  schedule:
-    - cron: '7 15 * * 1-5'   # 8:37 pm IST, Monday to Friday: prices, scores, news, company numbers
+  # Paused on 19 Nov 2026: the trading rule failed a 20-year test (see long_log.txt). Re-enable by restoring:
+  # schedule:
+  #   - cron: '7 15 * * 1-5'   # 8:37 pm IST, Monday to Friday
   workflow_dispatch:
-  push:
-    paths:
-      - 'fundamentals.csv'
-      - 'build/news_fund.py'
-      - 'build/notify.py'
-      - 'build/build.py'
-      - 'build/backtest_styles.py'
-      - 'build/backtest_algos.py'
-      - 'build/backtest_exits.py'
-      - 'build/backtest_ideas.py'
-      - 'build/adjust.py'
-      - '.github/workflows/refresh.yml'
 permissions:
   contents: write
 concurrency:
