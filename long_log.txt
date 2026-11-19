@@ -1,0 +1,426 @@
+old-format files: 3868 of 4090 weekdays from 2006-01-01 to 2021-09-06 (209s)
+$3IINFOTECH.NS: possibly delisted; no timezone found
+$3IINFOTECH.NS: No data found, symbol may be delisted
+$8KMILES.NS: possibly delisted; no timezone found
+$8KMILES.NS: No data found, symbol may be delisted
+$ABIRLANUVO.NS: possibly delisted; no timezone found
+$ABIRLANUVO.NS: No data found, symbol may be delisted
+$ADLABSFILM.NS: possibly delisted; no timezone found
+$ADLABSFILM.NS: No data found, symbol may be delisted
+$AEGISCHEM.NS: possibly delisted; no timezone found
+$AEGISCHEM.NS: No data found, symbol may be delisted
+$AKRUTI.NS: possibly delisted; no timezone found
+$AKRUTI.NS: No data found, symbol may be delisted
+$AMARAJABAT.NS: possibly delisted; no timezone found
+$AMARAJABAT.NS: No data found, symbol may be delisted
+$AMIORG.NS: possibly delisted; no timezone found
+$AMIORG.NS: No data found, symbol may be delisted
+$AMTEKAUTO.NS: possibly delisted; no timezone found
+$AMTEKAUTO.NS: No data found, symbol may be delisted
+$ANSALHSG.NS: possibly delisted; no timezone found
+$ANSALHSG.NS: No data found, symbol may be delisted
+$ANSALINFRA.NS: possibly delisted; no timezone found
+$ANSALINFRA.NS: No data found, symbol may be delisted
+$AQUA.NS: possibly delisted; no timezone found
+$AQUA.NS: No data found, symbol may be delisted
+$ARCOTECH.NS: possibly delisted; no timezone found
+$ARCOTECH.NS: No data found, symbol may be delisted
+$AREVAT&D.NS: possibly delisted; no timezone found
+$AREVAT&D.NS: No data found, symbol may be delisted
+$ARVINDMILL.NS: possibly delisted; no timezone found
+$ARVINDMILL.NS: No data found, symbol may be delisted
+$ASIANELEC.NS: possibly delisted; no timezone found
+$ASIANELEC.NS: No data found, symbol may be delisted
+$ATLANTA.NS: possibly delisted; no timezone found
+$ATLANTA.NS: No data found, symbol may be delisted
+$AUSTRAL.NS: possibly delisted; no timezone found
+$AUSTRAL.NS: No data found, symbol may be delisted
+$BHUSANSTL.NS: possibly delisted; no timezone found
+$BHUSANSTL.NS: No data found, symbol may be delisted
+$BINANIIND.NS: possibly delisted; no timezone found
+$BINANIIND.NS: No data found, symbol may be delisted
+$BINDALAGRO.NS: possibly delisted; no timezone found
+$BINDALAGRO.NS: No data found, symbol may be delisted
+$BONGAIREFN.NS: possibly delisted; no timezone found
+$BONGAIREFN.NS: No data found, symbol may be delisted
+$BOROSIL.NS: possibly delisted; no timezone found
+$BOROSIL.NS: No data found, symbol may be delisted
+$BRFL.NS: possibly delisted; no timezone found
+$BRFL.NS: No data found, symbol may be delisted
+$CADILAHC.NS: possibly delisted; no timezone found
+$CADILAHC.NS: No data found, symbol may be delisted
+$CAROLINFO.NS: possibly delisted; no timezone found
+$CAROLINFO.NS: No data found, symbol may be delisted
+$CASTROL.NS: possibly delisted; no timezone found
+$CASTROL.NS: No data found, symbol may be delisted
+$CENTURYTEX.NS: possibly delisted; no timezone found
+$CENTURYTEX.NS: No data found, symbol may be delisted
+$CINEMAXIN.NS: possibly delisted; no timezone found
+$CINEMAXIN.NS: No data found, symbol may be delisted
+$CMC.NS: possibly delisted; no timezone found
+$CMC.NS: No data found, symbol may be delisted
+$COREPROTEC.NS: possibly delisted; no timezone found
+$COREPROTEC.NS: No data found, symbol may be delisted
+$CORPBANK.NS: possibly delisted; no timezone found
+$CORPBANK.NS: No data found, symbol may be delisted
+$COSMOFILMS.NS: possibly delisted; no timezone found
+$COSMOFILMS.NS: No data found, symbol may be delisted
+$COX&KINGS.NS: possibly delisted; no timezone found
+$COX&KINGS.NS: No data found, symbol may be delisted
+$CROMPGREAV.NS: possibly delisted; no timezone found
+$CROMPGREAV.NS: No data found, symbol may be delisted
+$DAAWAT.NS: possibly delisted; no timezone found
+$DAAWAT.NS: No data found, symbol may be delisted
+$DHFL.NS: possibly delisted; no timezone found
+$DHFL.NS: No data found, symbol may be delisted
+$DIGJAMLTD.NS: possibly delisted; no timezone found
+$DIGJAMLTD.NS: No data found, symbol may be delisted
+$DISHMAN.NS: possibly delisted; no timezone found
+$DISHMAN.NS: No data found, symbol may be delisted
+$EASUNREYRL.NS: possibly delisted; no timezone found
+$EASUNREYRL.NS: No data found, symbol may be delisted
+$EQUITAS.NS: possibly delisted; no timezone found
+$EQUITAS.NS: No data found, symbol may be delisted
+$ERAINFRA.NS: possibly delisted; no timezone found
+$ERAINFRA.NS: No data found, symbol may be delisted
+$ESL.NS: possibly delisted; no timezone found
+$ESL.NS: No data found, symbol may be delisted
+$ESSAROIL.NS: possibly delisted; no timezone found
+$ESSAROIL.NS: No data found, symbol may be delisted
+$EXCEL.NS: possibly delisted; no timezone found
+$EXCEL.NS: No data found, symbol may be delisted
+$FINANTECH.NS: possibly delisted; no timezone found
+$FINANTECH.NS: No data found, symbol may be delisted
+$FRL.NS: possibly delisted; no timezone found
+$FRL.NS: No data found, symbol may be delisted
+$GAL.NS: possibly delisted; no timezone found
+$GAL.NS: No data found, symbol may be delisted
+$GEOINFO.NS: possibly delisted; no timezone found
+$GEOINFO.NS: No data found, symbol may be delisted
+$GEOJIT.NS: possibly delisted; no timezone found
+$GEOJIT.NS: No data found, symbol may be delisted
+$GEPIL.NS: possibly delisted; no timezone found
+$GEPIL.NS: No data found, symbol may be delisted
+$GLODYNE.NS: possibly delisted; no timezone found
+$GLODYNE.NS: No data found, symbol may be delisted
+$GMRINFRA.NS: possibly delisted; no timezone found
+$GMRINFRA.NS: No data found, symbol may be delisted
+$GRUH.NS: possibly delisted; no timezone found
+$GRUH.NS: No data found, symbol may be delisted
+$GUJNRECOKE.NS: possibly delisted; no timezone found
+$GUJNRECOKE.NS: No data found, symbol may be delisted
+$HDFC.NS: possibly delisted; no timezone found
+$HDFC.NS: No data found, symbol may be delisted
+$HEXAWARE.NS: possibly delisted; no timezone found
+$HEXAWARE.NS: No data found, symbol may be delisted
+$HINDMOTORS.NS: possibly delisted; no price data found  (1d 1927-12-14 -> 2026-11-19)
+$HINDMOTORS.NS: possibly delisted; no price data found  (period=5d)
+$HOCL.NS: possibly delisted; no timezone found
+$HOCL.NS: No data found, symbol may be delisted
+$HOTELEELA.NS: possibly delisted; no timezone found
+$HOTELEELA.NS: No data found, symbol may be delisted
+$IBULHSGFIN.NS: possibly delisted; no timezone found
+$IBULHSGFIN.NS: No data found, symbol may be delisted
+$ICSA.NS: possibly delisted; no timezone found
+$ICSA.NS: No data found, symbol may be delisted
+$IDFC.NS: possibly delisted; no timezone found
+$IDFC.NS: No data found, symbol may be delisted
+$INDIABULLS.NS: possibly delisted; no timezone found
+$INDIABULLS.NS: No data found, symbol may be delisted
+$INDIAINFO.NS: possibly delisted; no timezone found
+$INDIAINFO.NS: No data found, symbol may be delisted
+$INDOSOLAR.NS: possibly delisted; no timezone found
+$INDOSOLAR.NS: No data found, symbol may be delisted
+$INFIBEAM.NS: possibly delisted; no timezone found
+$INFIBEAM.NS: No data found, symbol may be delisted
+$INFOSYSTCH.NS: possibly delisted; no timezone found
+$INFOSYSTCH.NS: No data found, symbol may be delisted
+$IOLN.NS: possibly delisted; no timezone found
+$IOLN.NS: No data found, symbol may be delisted
+$ISMTLTD.NS: possibly delisted; no timezone found
+$ISMTLTD.NS: No data found, symbol may be delisted
+$ISPATIND.NS: possibly delisted; no timezone found
+$ISPATIND.NS: No data found, symbol may be delisted
+$IVRCLINFRA.NS: possibly delisted; no timezone found
+$IVRCLINFRA.NS: No data found, symbol may be delisted
+$IVRPRIME.NS: possibly delisted; no timezone found
+$IVRPRIME.NS: No data found, symbol may be delisted
+$JAYPEEHOT.NS: possibly delisted; no timezone found
+$JAYPEEHOT.NS: No data found, symbol may be delisted
+$JBCHEPHARM.NS: possibly delisted; no price data found  (period=5d)
+$JINDALSWHL.NS: possibly delisted; no timezone found
+$JINDALSWHL.NS: No data found, symbol may be delisted
+$JPASSOCIAT.NS: possibly delisted; no timezone found
+$JPASSOCIAT.NS: No data found, symbol may be delisted
+$JPINFRATEC.NS: possibly delisted; no timezone found
+$JPINFRATEC.NS: No data found, symbol may be delisted
+$JSWISPL.NS: possibly delisted; no timezone found
+$JSWISPL.NS: No data found, symbol may be delisted
+$KALPATPOWR.NS: possibly delisted; no timezone found
+$KALPATPOWR.NS: No data found, symbol may be delisted
+$KARDA.NS: possibly delisted; no timezone found
+$KARDA.NS: No data found, symbol may be delisted
+$KBCGLOBAL.NS: possibly delisted; no timezone found
+$KBCGLOBAL.NS: No data found, symbol may be delisted
+$KECINTL.NS: possibly delisted; no timezone found
+$KECINTL.NS: No data found, symbol may be delisted
+$KIRLOSOIL.NS: possibly delisted; no timezone found
+$KIRLOSOIL.NS: No data found, symbol may be delisted
+$KNL.NS: possibly delisted; no timezone found
+$KNL.NS: No data found, symbol may be delisted
+$KPIT.NS: possibly delisted; no timezone found
+$KPIT.NS: No data found, symbol may be delisted
+$KSOILS.NS: possibly delisted; no timezone found
+$KSOILS.NS: No data found, symbol may be delisted
+$KWALITY.NS: possibly delisted; no timezone found
+$KWALITY.NS: No data found, symbol may be delisted
+$LAKSHVILAS.NS: possibly delisted; no timezone found
+$LAKSHVILAS.NS: No data found, symbol may be delisted
+$LITL.NS: possibly delisted; no timezone found
+$LITL.NS: No data found, symbol may be delisted
+$LLOYDSTEEL.NS: possibly delisted; no timezone found
+$LLOYDSTEEL.NS: No data found, symbol may be delisted
+$LYCOS.NS: possibly delisted; no timezone found
+$LYCOS.NS: No data found, symbol may be delisted
+$MAGMA.NS: possibly delisted; no timezone found
+$MAGMA.NS: No data found, symbol may be delisted
+$MAJESCO.NS: possibly delisted; no timezone found
+$MAJESCO.NS: No data found, symbol may be delisted
+$MANDHANA.NS: possibly delisted; no timezone found
+$MANDHANA.NS: No data found, symbol may be delisted
+$MANGCHEFER.NS: possibly delisted; no timezone found
+$MANGCHEFER.NS: No data found, symbol may be delisted
+$MANPASAND.NS: possibly delisted; no timezone found
+$MANPASAND.NS: No data found, symbol may be delisted
+$MCDHOLDING.NS: possibly delisted; no timezone found
+$MCDHOLDING.NS: No data found, symbol may be delisted
+$MCDOWELL-N.NS: possibly delisted; no timezone found
+$MCDOWELL-N.NS: No data found, symbol may be delisted
+$MID-DAY.NS: possibly delisted; no timezone found
+$MID-DAY.NS: No data found, symbol may be delisted
+$MINDAIND.NS: possibly delisted; no timezone found
+$MINDAIND.NS: No data found, symbol may be delisted
+$MINDTREE.NS: possibly delisted; no timezone found
+$MINDTREE.NS: No data found, symbol may be delisted
+$MIRCELECTR.NS: possibly delisted; no timezone found
+$MIRCELECTR.NS: No data found, symbol may be delisted
+$MLL.NS: possibly delisted; no timezone found
+$MLL.NS: No data found, symbol may be delisted
+$MONNETISPA.NS: possibly delisted; no timezone found
+$MONNETISPA.NS: No data found, symbol may be delisted
+$MOSERBAER.NS: possibly delisted; no timezone found
+$MOSERBAER.NS: No data found, symbol may be delisted
+$MOTHERSUMI.NS: possibly delisted; no timezone found
+$MOTHERSUMI.NS: No data found, symbol may be delisted
+$MUNDRAPORT.NS: possibly delisted; no timezone found
+$MUNDRAPORT.NS: No data found, symbol may be delisted
+$MVL.NS: possibly delisted; no timezone found
+$MVL.NS: No data found, symbol may be delisted
+$NAGARCONST.NS: possibly delisted; no timezone found
+$NAGARCONST.NS: No data found, symbol may be delisted
+$NAGARFERT.NS: possibly delisted; no timezone found
+$NAGARFERT.NS: No data found, symbol may be delisted
+$NANDAN.NS: possibly delisted; no timezone found
+$NANDAN.NS: No data found, symbol may be delisted
+$NAVNETPUBL.NS: possibly delisted; no timezone found
+$NAVNETPUBL.NS: No data found, symbol may be delisted
+$NBVENTURES.NS: possibly delisted; no timezone found
+$NBVENTURES.NS: No data found, symbol may be delisted
+$NEYVELILIG.NS: possibly delisted; no timezone found
+$NEYVELILIG.NS: No data found, symbol may be delisted
+$NIITTECH.NS: possibly delisted; no timezone found
+$NIITTECH.NS: No data found, symbol may be delisted
+$NITESHEST.NS: possibly delisted; no timezone found
+$NITESHEST.NS: No data found, symbol may be delisted
+$NITINFIRE.NS: possibly delisted; no timezone found
+$NITINFIRE.NS: No data found, symbol may be delisted
+$OCCL.NS: possibly delisted; no timezone found
+$OCCL.NS: No data found, symbol may be delisted
+$OPTOCIRCUI.NS: possibly delisted; no timezone found
+$OPTOCIRCUI.NS: No data found, symbol may be delisted
+$ORBITCORP.NS: possibly delisted; no timezone found
+$ORBITCORP.NS: No data found, symbol may be delisted
+$ORCHIDCHEM.NS: possibly delisted; no timezone found
+$ORCHIDCHEM.NS: No data found, symbol may be delisted
+$PANTALOONR.NS: possibly delisted; no timezone found
+$PANTALOONR.NS: No data found, symbol may be delisted
+$PEL.NS: possibly delisted; no timezone found
+$PEL.NS: No data found, symbol may be delisted
+$PHILIPCARB.NS: possibly delisted; no timezone found
+$PHILIPCARB.NS: No data found, symbol may be delisted
+$PINCON.NS: possibly delisted; no timezone found
+$PINCON.NS: No data found, symbol may be delisted
+$PRATIBHA.NS: possibly delisted; no timezone found
+$PRATIBHA.NS: No data found, symbol may be delisted
+$PROZONINTU.NS: possibly delisted; no timezone found
+$PROZONINTU.NS: No data found, symbol may be delisted
+$PUNJLLOYD.NS: possibly delisted; no timezone found
+$PUNJLLOYD.NS: No data found, symbol may be delisted
+$RAMSARUP.NS: possibly delisted; no timezone found
+$RAMSARUP.NS: No data found, symbol may be delisted
+$RANBAXY.NS: possibly delisted; no timezone found
+$RANBAXY.NS: No data found, symbol may be delisted
+$RELCAPITAL.NS: possibly delisted; no timezone found
+$RELCAPITAL.NS: No data found, symbol may be delisted
+$RELMEDIA.NS: possibly delisted; no timezone found
+$RELMEDIA.NS: No data found, symbol may be delisted
+$RESURGERE.NS: possibly delisted; no timezone found
+$RESURGERE.NS: No data found, symbol may be delisted
+$RNRL.NS: possibly delisted; no timezone found
+$RNRL.NS: No data found, symbol may be delisted
+$ROLTA.NS: possibly delisted; no timezone found
+$ROLTA.NS: No data found, symbol may be delisted
+$RUCHISOYA.NS: possibly delisted; no timezone found
+$RUCHISOYA.NS: No data found, symbol may be delisted
+$SATYAMCOMP.NS: possibly delisted; no timezone found
+$SATYAMCOMP.NS: No data found, symbol may be delisted
+$SEINVEST.NS: possibly delisted; no timezone found
+$SEINVEST.NS: No data found, symbol may be delisted
+$SELAN.NS: possibly delisted; no timezone found
+$SELAN.NS: No data found, symbol may be delisted
+$SESAGOA.NS: possibly delisted; no timezone found
+$SESAGOA.NS: No data found, symbol may be delisted
+$SHREEASHTA.NS: possibly delisted; no timezone found
+$SHREEASHTA.NS: No data found, symbol may be delisted
+$SICAL.NS: possibly delisted; no timezone found
+$SICAL.NS: No data found, symbol may be delisted
+$SINTEX.NS: possibly delisted; no timezone found
+$SINTEX.NS: No data found, symbol may be delisted
+$SKUMARSYNF.NS: possibly delisted; no timezone found
+$SKUMARSYNF.NS: No data found, symbol may be delisted
+$SORILINFRA.NS: possibly delisted; no timezone found
+$SORILINFRA.NS: No data found, symbol may be delisted
+$SPICETELE.NS: possibly delisted; no timezone found
+$SPICETELE.NS: No data found, symbol may be delisted
+$SPSL.NS: possibly delisted; no timezone found
+$SPSL.NS: No data found, symbol may be delisted
+$SREINFRA.NS: possibly delisted; no timezone found
+$SREINFRA.NS: No data found, symbol may be delisted
+$STER.NS: possibly delisted; no timezone found
+$STER.NS: No data found, symbol may be delisted
+$STRTECH.NS: possibly delisted; no timezone found
+$STRTECH.NS: No data found, symbol may be delisted
+$SUJANATOW.NS: possibly delisted; no timezone found
+$SUJANATOW.NS: No data found, symbol may be delisted
+$SUNILHITEC.NS: possibly delisted; no timezone found
+$SUNILHITEC.NS: No data found, symbol may be delisted
+$SUPREMETEX.NS: possibly delisted; no timezone found
+$SUPREMETEX.NS: No data found, symbol may be delisted
+$SUULD.NS: possibly delisted; no timezone found
+$SUULD.NS: No data found, symbol may be delisted
+$SUVENPHAR.NS: possibly delisted; no timezone found
+$SUVENPHAR.NS: No data found, symbol may be delisted
+$SWANENERGY.NS: possibly delisted; no timezone found
+$SWANENERGY.NS: No data found, symbol may be delisted
+$TALWALKARS.NS: possibly delisted; no timezone found
+$TALWALKARS.NS: No data found, symbol may be delisted
+$TATACOFFEE.NS: possibly delisted; no timezone found
+$TATACOFFEE.NS: No data found, symbol may be delisted
+$TATAMOTORS.NS: possibly delisted; no timezone found
+$TATAMOTORS.NS: No data found, symbol may be delisted
+$TATAMTRDVR.NS: possibly delisted; no timezone found
+$TATAMTRDVR.NS: No data found, symbol may be delisted
+$TATATEA.NS: possibly delisted; no timezone found
+$TATATEA.NS: No data found, symbol may be delisted
+$TEXMACOLTD.NS: possibly delisted; no timezone found
+$TEXMACOLTD.NS: No data found, symbol may be delisted
+$THEBYKE.NS: possibly delisted; no timezone found
+$THEBYKE.NS: No data found, symbol may be delisted
+$THINKSOFT.NS: possibly delisted; no timezone found
+$THINKSOFT.NS: No data found, symbol may be delisted
+$TIDEWATER.NS: possibly delisted; no timezone found
+$TIDEWATER.NS: No data found, symbol may be delisted
+$TULIP.NS: possibly delisted; no timezone found
+$TULIP.NS: No data found, symbol may be delisted
+$TV-18.NS: possibly delisted; no timezone found
+$TV-18.NS: No data found, symbol may be delisted
+$TV18BRDCST.NS: possibly delisted; no timezone found
+$TV18BRDCST.NS: No data found, symbol may be delisted
+$TWL.NS: possibly delisted; no timezone found
+$TWL.NS: No data found, symbol may be delisted
+$UJAAS.NS: possibly delisted; no timezone found
+$UJAAS.NS: No data found, symbol may be delisted
+$UMANGDAIRY.NS: possibly delisted; no timezone found
+$UMANGDAIRY.NS: No data found, symbol may be delisted
+$UNIPHOS.NS: possibly delisted; no timezone found
+$UNIPHOS.NS: No data found, symbol may be delisted
+$UPERGANGES.NS: possibly delisted; no timezone found
+$UPERGANGES.NS: No data found, symbol may be delisted
+$UTTAMSTL.NS: possibly delisted; no timezone found
+$UTTAMSTL.NS: No data found, symbol may be delisted
+$UTVSOF.NS: possibly delisted; no timezone found
+$UTVSOF.NS: No data found, symbol may be delisted
+$VAKRANSOFT.NS: possibly delisted; no timezone found
+$VAKRANSOFT.NS: No data found, symbol may be delisted
+$VITLINFO.NS: possibly delisted; no timezone found
+$VITLINFO.NS: No data found, symbol may be delisted
+$WELSPUNIND.NS: possibly delisted; no timezone found
+$WELSPUNIND.NS: No data found, symbol may be delisted
+$WWIL.NS: possibly delisted; no timezone found
+$WWIL.NS: No data found, symbol may be delisted
+$ZEENEWS.NS: possibly delisted; no timezone found
+$ZEENEWS.NS: No data found, symbol may be delisted
+$ZEETELE.NS: possibly delisted; no timezone found
+$ZEETELE.NS: No data found, symbol may be delisted
+$ZUARIGLOB.NS: possibly delisted; no timezone found
+$ZUARIGLOB.NS: No data found, symbol may be delisted
+skip 20220808.csv Error tokenizing data. C error: Expected 1 fields in line 5, saw 2
+
+falls over 25%: 4178; decided with Yahoo split history: 883; by price rules: 3295; adjusted: 3719
+rows 7402062 symbols 4080 adjustments 3719
+panel (5152, 4080) 2006-01-02 2026-11-18
+
+BENCHMARK (300 most-traded, equal weight) 10.100000381469727% a year, worst fall -74.5999984741211%
+SITE RULE 3.7% a year, worst fall -80.3%, sharpe 0.28, 1414 trades, win 40.7%, avg 0.49%, exits {'stop': 51.3, 'time': 30.1, 'target': 18.3, 'gone': 0.4}
+years rule  {2007: np.float64(57.9), 2008: np.float64(-65.1), 2009: np.float64(68.3), 2010: np.float64(-9.4), 2011: np.float64(-22.7), 2012: np.float64(1.4), 2013: np.float64(12.3), 2014: np.float64(13.6), 2015: np.float64(-16.0), 2016: np.float64(-21.3), 2017: np.float64(22.7), 2018: np.float64(-15.6), 2019: np.float64(-18.3), 2020: np.float64(11.6), 2021: np.float64(15.0), 2022: np.float64(13.4), 2023: np.float64(73.3), 2024: np.float64(1.6), 2025: np.float64(19.0), 2026: np.float64(43.4)}
+years bench {2007: np.float32(78.2), 2008: np.float32(-66.1), 2009: np.float32(122.9), 2010: np.float32(11.9), 2011: np.float32(-38.8), 2012: np.float32(33.4), 2013: np.float32(-11.0), 2014: np.float32(48.6), 2015: np.float32(4.5), 2016: np.float32(2.3), 2017: np.float32(49.1), 2018: np.float32(-20.0), 2019: np.float32(-5.4), 2020: np.float32(23.4), 2021: np.float32(43.1), 2022: np.float32(0.3), 2023: np.float32(47.8), 2024: np.float32(21.3), 2025: np.float32(3.5), 2026: np.float32(5.5)}
+2007-2010 (incl. the 2008 crash)     rule   -4.5% (worst -71.6%)  market   10.6% (worst -74.5999984741211%)
+2011-2015                            rule   -2.3% (worst -35.9%)  market    2.4% (worst -45.20000076293945%)
+2016-2020 (incl. the 2020 crash)     rule   -5.6% (worst -58.1%)  market    7.3% (worst -55.29999923706055%)
+2021-2026                            rule   25.8% (worst -29.2%)  market   19.2% (worst -24.0%)
+with mood filter 9.2 -55.8
+
+GRID over 20 years (target x stop, 30 days, 5 at a time):
+stop  0.05  0.08  0.10  0.15
+t                           
+0.00   1.5   4.5   3.7  10.3
+0.10   2.1   3.3   6.9   8.6
+0.15   3.3   4.6   6.5  12.5
+0.20   4.8   3.7   2.8   9.0
+0.30   8.3   7.1   4.1  10.5
+best 10 settings:
+     target  stop  days  maxpos  cagr    dd  sharpe
+117    0.30  0.15    30      10  14.8 -70.6    0.76
+21      NaN  0.15    30      10  14.4 -74.3    0.72
+93     0.20  0.15    30      10  14.2 -69.3    0.75
+69     0.15  0.15    30      10  13.0 -63.5    0.71
+119    0.30  0.15    40      10  13.0 -71.0    0.69
+106    0.30  0.08    40       5  12.8 -64.8    0.63
+115    0.30  0.15    20      10  12.6 -70.3    0.67
+71     0.15  0.15    40      10  12.5 -65.1    0.69
+68     0.15  0.15    30       5  12.5 -71.6    0.62
+107    0.30  0.08    40      10  12.4 -55.2    0.70
+median of all settings 7.45 share beating market 19
+Monthly top 5 by momentum, no stop                                                 29.2% worst  -82.3% | periods [np.float64(-3.7), np.float64(29.7), np.float64(48.7), np.float64(41.4)]
+Monthly top 10 by momentum, no stop                                                24.1% worst  -77.2% | periods [np.float64(-4.8), np.float64(27.4), np.float64(30.6), np.float64(40.6)]
+Newly in the momentum top 30, 20% / 10%, 21 days                                    2.0% worst  -75.6% | periods [np.float64(-0.8), np.float64(1.8), np.float64(-1.5), np.float64(8.6)]
+Breakout to a 52-week high on 1.5x volume, 20% / 8%, 30 days                       -4.9% worst  -83.3% | periods [np.float64(-18.2), np.float64(-7.4), np.float64(-1.6), np.float64(4.8)]
+Base breakout (30-day range < 15%) on 1.5x volume, 20% / 8%, 20 days                0.9% worst  -53.0% | periods [np.float64(-1.6), np.float64(-7.6), np.float64(10.7), np.float64(2.0)]
+Pullback to the 20-day average in an uptrend, then a bounce, 20% / 5%, 30 days    -11.7% worst  -96.0% | periods [np.float64(-7.5), np.float64(-14.9), np.float64(-16.1), np.float64(-7.7)]
+
+WALK-FORWARD: settings chosen on 2007-01-16..2016, checked on 2017..2026-11-18. Market: 5.699999809265137% then 14.800000190734863%
+12-month momentum: newly in the top 50 (this site's rule)              pick T0.3 S0.08 D40 N10 | 2007-16    8.9% | 2017-26   15.8% (worst -30.9%) | top-5 settings median 10.8%
+12-month momentum: newly in the top 30                                 pick T0.1 S0.08 D40 N10 | 2007-16    6.9% | 2017-26    7.6% (worst -37.5%) | top-5 settings median 6.9%
+6-month momentum: newly in the top 30                                  pick TNone S0.12 D30 N10 | 2007-16    1.8% | 2017-26   14.1% (worst -52.7%) | top-5 settings median 12.4%
+3-month momentum: newly in the top 30                                  pick TNone S0.08 D30 N5 | 2007-16    3.9% | 2017-26    9.1% (worst -47.5%) | top-5 settings median 6.6%
+Near the 52-week high, strongest 3-month gain, newly in the top 30     pick T0.3 S0.12 D40 N5 | 2007-16   10.1% | 2017-26   11.9% (worst -62.6%) | top-5 settings median 11.9%
+First new 52-week high in a month, above-average volume                pick TNone S0.12 D20 N10 | 2007-16    5.5% | 2017-26   16.0% (worst -43.4%) | top-5 settings median 13.7%
+Pullback to the 20-day average in an uptrend, then a bounce            pick T0.3 S0.12 D30 N10 | 2007-16    1.5% | 2017-26    7.5% (worst -55.1%) | top-5 settings median 10.2%
+Pullback in a momentum leader (top 50), then a bounce                  pick T0.3 S0.12 D40 N10 | 2007-16    5.4% | 2017-26   19.7% (worst -51.1%) | top-5 settings median 16.4%
+Base breakout: 30-day range under 15%, 1.5x volume                     pick T0.2 S0.12 D40 N5 | 2007-16    9.0% | 2017-26    8.6% (worst -40.4%) | top-5 settings median 6.7%
+NR7 day in an uptrend, then a close above its high                     pick T0.2 S0.12 D30 N10 | 2007-16    5.5% | 2017-26   11.0% (worst -51.3%) | top-5 settings median 7.0%
+MACD crosses up above zero, above 200-day                              pick T0.3 S0.08 D40 N5 | 2007-16    8.3% | 2017-26    1.8% (worst -49.6%) | top-5 settings median 6.2%
+Bollinger squeeze breakout                                             pick T0.3 S0.08 D40 N10 | 2007-16    5.2% | 2017-26    1.2% (worst -45.3%) | top-5 settings median -0.2%
+Golden cross: 50-day crosses above 200-day                             pick T0.2 S0.12 D20 N5 | 2007-16    4.6% | 2017-26    4.1% (worst -60.9%) | top-5 settings median 4.9%
+
+wrote long_bt.json
