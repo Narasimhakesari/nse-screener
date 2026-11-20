@@ -44,20 +44,40 @@ FILT = {k: (bidx > bidx.rolling(k, min_periods=int(k * .75)).mean()).values for 
 
 VOL = vol.values
 
-def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap=2, lo=None, hi=None, daily=False, wt='eq', offset=0, cost=None):
+def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap=2, lo=None, hi=None, daily=False, wt='eq', offset=0, cost=None,
+        log=None, cash_rate=0.0, tax=False, capital=1e6):
+    # log: list to collect trades (symbol, buy date, sell date, days held, % return after costs)
+    # cash_rate: yearly interest on uninvested cash (e.g. a liquid fund); tax: Indian capital-gains tax at today's rates,
+    # paid each April on the previous financial year (short-term 20% + 4% cess; long-term 12.5% + cess above Rs 1.25 lakh,
+    # for an account starting at `capital`; losses set off and carried forward)
     COST_ = COST if cost is None else cost
+    crd = (1 + cash_rate) ** (1 / 252) - 1; fy = dict(st=0.0, lt=0.0); carry = dict(st=0.0, lt=0.0); TAXPAID = []
+    def realise(p, px, i):
+        proceeds = p['sh'] * px * (1 - COST_); g = proceeds - p['cost']; d = (dates[i] - dates[p['bi']]).days
+        fy['lt' if d > 365 else 'st'] += g
+        if log is not None: log.append((str(C.columns[p['j']]), str(dates[p['bi']].date()), str(dates[i].date()), d, round((proceeds / p['cost'] - 1) * 100, 2)))
+        return proceeds
     lo = START if lo is None else lo; hi = n - 1 if hi is None else hi
     Sv = score.values; up = np.ones(n, bool) if filt is None else FILT[filt]
     buf = buf or N
     cash, pos, eq, pend, sells = 1.0, {}, [], [], set()
     for i in range(lo, hi + 1):
         # sells at today's open (decided yesterday), or a delisted stock at its last price
+        if cash > 0: cash *= 1 + crd
+        if tax and i > lo and dates[i].month >= 4 and dates[i - 1].month < 4:
+            st, lt = fy['st'] + carry['st'], fy['lt'] + carry['lt']
+            if st < 0 and lt > 0: lt, st = lt + st, 0.0
+            if lt < 0 and st > 0: st, lt = st, lt   # long-term losses cannot reduce short-term gains
+            ex = 125000 / capital
+            tx = 0.208 * max(st, 0) + 0.13 * max(lt - ex, 0)
+            carry = dict(st=min(st, 0), lt=min(lt, 0)); fy = dict(st=0.0, lt=0.0)
+            cash -= tx; TAXPAID.append(tx)
         for j in list(pos):
             p = pos[j]; o = Ov[i, j]
             if not np.isfinite(Cv[i, j]) and i > p['bi']:
-                cash += p['sh'] * p['lc'] * (1 - COST_); del pos[j]; continue
+                cash += realise(p, p['lc'], i); del pos[j]; continue
             if j in sells and np.isfinite(o):
-                cash += p['sh'] * o * (1 - COST_); del pos[j]
+                cash += realise(p, o, i); del pos[j]
         sells = set()
         eqv = cash + sum(p['sh'] * p['lc'] for p in pos.values())
         for j, slot in pend:
@@ -65,7 +85,7 @@ def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap
             if j in pos or not np.isfinite(o) or o <= 0: continue
             val = min(cash, eqv * slot)
             if val < eqv * slot * 0.5: continue
-            cash -= val; pos[j] = dict(sh=val / (o * (1 + COST_)), bi=i, lc=o, pk=o)
+            cash -= val; pos[j] = dict(sh=val / (o * (1 + COST_)), bi=i, lc=o, pk=o, cost=val, j=j)
         pend = []
         for j, p in pos.items():
             c = Cv[i, j]
