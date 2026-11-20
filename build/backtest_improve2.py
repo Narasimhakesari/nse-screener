@@ -33,7 +33,7 @@ def staggered(**kw):
     curves = [sim(every=21, offset=o, **{k: v for k, v in kw.items() if k != 'every'}) for o in (0, 5, 10, 15)]
     return sum(c / c.iloc[0] for c in curves) / 4
 
-if __name__ == '__main__':
+if __name__ == '__main__' and not (len(sys.argv) > 2 and sys.argv[2] == 'days'):
     res = {}; B = per_bounds()
     def show(lab, s, b0=None):
         beat = '' if b0 is None else f" | beats current in {sum(1 for a, b in zip(s['periods'], b0['periods']) if a > b)}/4"
@@ -58,3 +58,19 @@ if __name__ == '__main__':
     res['walk_forward'] = dict(chosen=[[c[0], c[1]] for c in chosen], periods=[float(x) for x in wf])
     json.dump(res, open(f'{WD}/improve2_bt.json', 'w'), separators=(',', ':'), default=float)
     print('wrote improve2_bt.json')
+
+# ---- how much does the rebalance day matter? (python3 build/backtest_improve2.py WD days)
+if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'days':
+    import backtest_improve20 as bi
+    me0 = bi.ISME.copy(); pos_me = np.nonzero(me0)[0]
+    print('\nREBALANCE DAY: month-end shifted by k trading days (negative = earlier)')
+    out = {}
+    for k in (-6, -4, -3, -2, -1, 0, 1, 2, 3, 4, 6):
+        m = np.zeros(n, bool); idx_ = pos_me + k; m[idx_[(idx_ >= 0) & (idx_ < n)]] = True
+        bi.ISME = m
+        s, _ = evaluate(**base); out[k] = s
+        print(f"shift {k:+d}: {s['cagr']:6.1f}% worst {s['dd']:6.1f}% sharpe {s['sharpe']:.2f} | periods {[float(x) for x in s['periods']]}", flush=True)
+    bi.ISME = me0
+    v = [out[k]['cagr'] for k in out]
+    print(f"range {min(v):.1f}% to {max(v):.1f}%, median {float(np.median(v)):.1f}%")
+    json.dump({str(k): v for k, v in out.items()}, open(f'{WD}/rebalday_bt.json', 'w'), default=float)
