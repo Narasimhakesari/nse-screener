@@ -1,0 +1,49 @@
+name: Can the top 10 be improved? (20-year test)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'build/backtest_improve20.py'
+      - '.github/workflows/improvetest.yml'
+permissions:
+  contents: write
+concurrency:
+  group: improvetest
+  cancel-in-progress: true
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy yfinance
+      - name: Restore the recent NSE daily files
+        uses: actions/cache/restore@v4
+        with:
+          path: wd/bhav
+          key: bhav-${{ github.run_id }}
+          restore-keys: bhav-
+      - name: Restore the older NSE daily files (2006 onward)
+        uses: actions/cache/restore@v4
+        with:
+          path: wd/bhav20
+          key: bhav20-${{ github.run_id }}
+          restore-keys: bhav20-
+      - name: Test
+        run: |
+          mkdir -p wd
+          set -o pipefail
+          SPLITS_FILE=splits20.json python build/backtest_improve20.py wd 2>&1 | grep -v Warning | tee improve_log.txt
+          cp wd/improve_bt.json improve_bt.json
+      - name: Commit the results
+        if: always()
+        run: |
+          git config user.name "screener-bot"
+          git config user.email "screener-bot@users.noreply.github.com"
+          for f in improve_log.txt improve_bt.json; do [ -f "$f" ] && git add "$f"; done
+          git diff --cached --quiet || git commit -m "Can the top 10 be improved? (20-year test)"
+          git pull --rebase origin main
+          git push
