@@ -40,7 +40,7 @@ try:
 except Exception as e: print('industry list skipped', e)
 secv = np.array([SEC.get(s, '_' + s) for s in C.columns])
 bidx = (1 + bret).cumprod()
-FILT = {k: (bidx > bidx.rolling(k, min_periods=int(k * .75)).mean()).values for k in (100, 150, 200)}
+FILT = {k: (bidx > bidx.rolling(k, min_periods=int(k * .75)).mean()).values for k in (50, 75, 100, 125, 150, 200)}
 
 def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap=2, lo=None, hi=None):
     lo = START if lo is None else lo; hi = n - 1 if hi is None else hi
@@ -111,7 +111,9 @@ if __name__ == '__main__':
     tests = [('Baseline: top 10, 2 per industry, cash below the 200-day average', {}),
              ('Hold 15', dict(N=15)), ('Hold 20', dict(N=20)),
              ('Buffer: keep until out of the top 20', dict(buf=20)), ('Buffer: keep until out of the top 30', dict(buf=30)),
-             ('Market filter on the 150-day average', dict(filt=150)), ('Market filter on the 100-day average', dict(filt=100)),
+             ('Market filter on the 150-day average', dict(filt=150)), ('Market filter on the 125-day average', dict(filt=125)),
+             ('Market filter on the 100-day average', dict(filt=100)), ('Market filter on the 75-day average', dict(filt=75)), ('Market filter on the 50-day average', dict(filt=50)),
+             ('100-day filter, hold 15', dict(filt=100, N=15)), ('100-day filter, review every 10 trading days', dict(filt=100, every=10)),
              ('Half the stocks (not cash) below the 200-day average', dict(half=True)), ('No market filter', dict(filt=None)),
              ('Momentum: 12- and 6-month blend', dict(score=MOM['12-1 + 6-1 blend'])), ('Momentum: plain 12-month return', dict(score=MOM['plain 12-1 return'])),
              ('Trailing stop 15%', dict(trail=.15)), ('Trailing stop 20%', dict(trail=.20)),
@@ -135,13 +137,19 @@ if __name__ == '__main__':
         for i_ in range(len(win)):
             for j_ in range(i_ + 1, len(win)):
                 combos.append((f'{win[i_][0]} + {win[j_][0]}', {**win[i_][1], **win[j_][1]}))
-    for lab, ch in combos[:12]:
+    for lab, ch in combos[:3]:
         kw = {**base, **ch}; s, e = evaluate(**kw)
         s['beat'] = sum(1 for a, b in zip(s['periods'], b0['periods']) if a > b); res[lab] = s; curves[lab] = e
         print(f"{lab[:62]:62s} {s['cagr']:6.1f}% worst {s['dd']:6.1f}% sharpe {s['sharpe']:.2f} | periods {s['periods']} | beats baseline in {s['beat']}/4", flush=True)
     out['results'] = res; out['passed'] = [w[0] for w in win]
     print('\nBY YEAR')
-    for lab in list(res)[:1] + [c[0] for c in combos[:1]]: print(f'{lab[:62]:62s}', res[lab]['years'])
+    for lab in list(res)[:1] + ['Market filter on the 100-day average']: print(f'{lab[:62]:62s}', {y: float(v) for y, v in res[lab]['years'].items()})
+    # how often the 100-day filter switches, and time spent in cash
+    f = FILT[100][START:]; me = ISME[START:]; st_ = f[me]
+    print('100-day filter: switches per year', round(float((st_[1:] != st_[:-1]).sum()) / ((dates[-1] - dates[START]).days / 365.25), 1), '| share of month-ends in cash', round(float((~st_).mean()) * 100, 1), '%')
+    f2 = FILT[200][START:]; st2 = f2[me]
+    print('200-day filter: switches per year', round(float((st2[1:] != st2[:-1]).sum()) / ((dates[-1] - dates[START]).days / 365.25), 1), '| share of month-ends in cash', round(float((~st2).mean()) * 100, 1), '%')
+    print('today: index vs 100-day average', round(float(bidx.iloc[-1] / bidx.rolling(100).mean().iloc[-1] - 1) * 100, 2), '% | vs 200-day', round(float(bidx.iloc[-1] / bidx.rolling(200).mean().iloc[-1] - 1) * 100, 2), '%')
     print(f"{'market':62s}", out['bench']['years'])
     json.dump(out, open(f'{WD}/improve_bt.json', 'w'), separators=(',', ':'), default=float)
     print('\nwrote improve_bt.json')
