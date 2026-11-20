@@ -54,14 +54,15 @@ FSW = pd.DataFrame(SW, index=dates, columns=C.columns).astype('float32')
 CM = C.resample('ME').last(); UM = U.resample('ME').last().shift(1).fillna(False).astype(bool)
 MRm = CM.pct_change(fill_method=None).clip(-0.6, 1.5).where(UM).iloc[1:]
 MX = MRm.sub(MRm.median(axis=1), axis=0)
-FSEAS = pd.DataFrame(np.nan, index=dates, columns=C.columns, dtype='float32')
+FS = np.full((n, len(C.columns)), np.nan)
 me_days = [dates[i] for i in range(n) if ISME[i]]
 for d in me_days:
     nxt = (d + pd.offsets.MonthBegin(1)).month
     prior = MX[(MX.index <= d) & (MX.index.month == nxt)]
     cnt = prior.count(); avg = prior.mean()
     tx = (avg * cnt / (cnt + 3)).where(cnt >= 4)
-    FSEAS.loc[d] = (tx.where(LIQ.loc[d]).rank(pct=True) * 100).reindex(C.columns).values
+    FS[dates.get_loc(d)] = (tx.where(LIQ.loc[d]).rank(pct=True) * 100).reindex(C.columns).values.astype('float64')
+FSEAS = pd.DataFrame(FS, index=dates, columns=C.columns)
 print('score parts ready', flush=True)
 
 ELIG = LIQ & (C > s200)

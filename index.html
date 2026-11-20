@@ -79,6 +79,9 @@ p{margin:0}
 select{max-width:230px}
 select,input[type=search],input[type=number]{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink)}
 .linkbtn{border:0;background:none;color:var(--brand);cursor:pointer;padding:0;font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.redcut{list-style:none;font-size:14px;color:var(--ink2);padding:12px 4px 0;line-height:1.55}
+.redcut .linkbtn{font-size:14px;padding:0}
+.rf{display:inline-block;margin-top:3px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--bad-bg);color:var(--loss)}
 .weights{display:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 20px}
 .weights.open{display:grid}
 .weights label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink2)}
@@ -316,6 +319,7 @@ try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'
 catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
 
 const AUTO=await fetch('auto.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
+const FLG=await fetch('flags.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
 const S=D.stocks, BT=Object.assign({},ST.bt,D.bt), EV=D.ev||{}, MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const TM=(D.tmon||12)-1, TMN=MONL[TM];
 const MI={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
@@ -332,7 +336,7 @@ S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.news=NEWS[s.sym]||null;
   const man=(D.sc||{})[s.sym]||(ST.sc||{})[s.sym]||null,au=(AUTO.sc||{})[s.sym]||null;
   s.scSrc=man?`Screener.in, ${(D.sc||{})[s.sym]?D.scAsof:ST.scAsof}`:'';
   if(au&&(!man||man.np==null||(au.q&&dnum(au.q)>=dnum(man.q))||(!au.q&&au.src==='Screener.in'))){s.sc=Object.assign({},man||{},au);if(!au.q&&man&&man.q){['q','np','npYoY','sales','salesYoY'].forEach(k=>s.sc[k]=man[k]);}s.scSrc=`${au.src||'Yahoo Finance'}, fetched ${au.fetched||''}`;}else s.sc=man;
-  s.filings=au&&au.filings||null;});
+  s.filings=au&&au.filings||null;s.flags=(FLG.flags||{})[s.sym]||null;s.red=!!(s.flags&&s.flags.ex&&s.flags.ex.length);});
 (function(){
   const fin=s=>s.sector==='Financial Services';
   const A=(get,filt=()=>true)=>S.map(s=>filt(s)?get(s):null).filter(v=>v!=null&&isFinite(v));
@@ -379,7 +383,7 @@ function pros(s){const r=[];
   if(s.news&&s.news.tone==='Positive')r.push('Recent news is positive');
   if(s.setup==='Breakout')r.push('Swing setup: broke to a 50-day high on heavy volume');else if(s.setup==='Tight base')r.push('Swing setup: tight range near its high');else if(s.setup==='Pullback')r.push('Swing setup: pulled back to its 20-day average in an uptrend');
   return r;}
-function cons(s){const c=[];
+function cons(s){const c=[...(s.flags?s.flags.ex:[]),...(s.flags?s.flags.warn:[])];
   if(!BT.rising)c.push('Market breadth is falling; the cautious model is in cash');
   if(s.close<s.s200)c.push('Below its 200-day average: in a downtrend');
   if(s.rsi>75)c.push(`Overbought short term (RSI ${s.rsi.toFixed(0)}); entries after big runs often pull back`);
@@ -431,7 +435,9 @@ function pool(){return S.filter(s=>(st.uni==='all'||(st.uni==='liq'&&s.liq300)||
 function renderPicks(){
   document.querySelectorAll('.style').forEach(b=>b.setAttribute('aria-pressed',String(!st.custom&&b.dataset.s===st.style)));
   document.querySelectorAll('#uni button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===st.uni)));
-  const P=pool().filter(s=>st.uni==='watch'||s.close>s.s200).sort((a,b)=>b.score-a.score);
+  const P0=pool().filter(s=>st.uni==='watch'||s.close>s.s200).sort((a,b)=>b.score-a.score);
+  const P=st.uni==='watch'?P0:P0.filter(s=>!s.red);
+  const cut=st.uni==='watch'?[]:P0.slice(0,P0.indexOf(P[Math.min(st.lim,P.length)-1])+1).filter(s=>s.red);
   $('#headline').textContent=st.uni==='watch'?'Your watchlist, ranked':`Today's ${Math.min(st.lim,P.length)||''} best-scoring NSE stocks`.replace('  ',' ');
   if(!P.length){$('#picks').innerHTML=`<li class="empty">${st.uni==='watch'?'Your watchlist is empty. Open any stock and choose “Add to watchlist”.':'No stock in this sector is above its 200-day average right now. Try All sectors or All stocks.'}</li>`;return;}
   $('#picks').innerHTML=P.slice(0,st.lim).map((s,i)=>{const [vl,vc]=verdict(s),p=pros(s).slice(0,2),c=firstCon(s);
@@ -442,9 +448,10 @@ function renderPicks(){
       <div class="fs">${strip(s)}<div class="stripcap"><span>${s.setup?esc(s.setup)+' setup':''}</span><span>${s.news?'News: '+esc(s.news.tone.toLowerCase()):''}</span></div></div>
       <div class="score"><b>${Math.round(s.score)}</b><span class="v-${vc}">${vl}</span></div>
       <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')+
+    (cut.length?`<li class="redcut"><b>Left out for red flags:</b> ${cut.map(s=>`<button type="button" class="linkbtn" data-sym="${esc(s.sym)}">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}</button> (${esc(s.flags.ex[0].split(':')[0].toLowerCase())})`).join('; ')}. Their scores would have put them in this list.</li>`:'')+
     (P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');
 }
-$('#picks').addEventListener('click',e=>{if(e.target.id==='morePicks'){st.lim+=15;renderPicks();return;}const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
+$('#picks').addEventListener('click',e=>{if(e.target.id==='morePicks'){st.lim+=15;renderPicks();return;}const rb=e.target.closest('.redcut button');if(rb){openStock(rb.dataset.sym);return;}const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
 $('#picks').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('.pick');if(li){e.preventDefault();openStock(li.dataset.sym);}}});
 
 // ---------- table ----------
@@ -457,7 +464,7 @@ function renderTable(){
   $('#tbl thead').innerHTML='<tr>'+COLS.map(c=>`<th scope="col" class="${c[2]} ${st.sort===c[0]?'on':''}" data-k="${c[0]}" aria-sort="${st.sort===c[0]?(st.dir<0?'descending':'ascending'):'none'}">${c[1]}${st.sort===c[0]?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr>';
   const bar=(v,c)=>v==null?'<span class="muted">–</span>':`${Math.round(v)}<span class="mini"><i style="width:${v}%;background:${c}"></i></span>`;
   $('#tbl tbody').innerHTML=r.slice(0,st.tlim).map(s=>{const [vl,vc]=verdict(s);return `<tr data-sym="${esc(s.sym)}" tabindex="0">
-    <td class="l"><span class="s">${esc(s.sym)}</span><span class="n2">${esc(s.name)}</span></td><td><b>${Math.round(s.score)}</b></td><td class="l"><span class="v-${vc}" style="font-weight:600;font-size:13px">${vl}</span></td>
+    <td class="l"><span class="s">${esc(s.sym)}</span><span class="n2">${esc(s.name)}</span>${s.red?`<span class="rf" title="${esc(s.flags.ex.join('; '))}">Red flag</span>`:''}</td><td><b>${Math.round(s.score)}</b></td><td class="l"><span class="v-${vc}" style="font-weight:600;font-size:13px">${vl}</span></td>
     <td>${bar(s.fMom,'var(--f1)')}</td><td>${bar(s.fTrend,'var(--f2)')}</td><td>${bar(s.fFund,'var(--f3)')}</td><td>${bar(s.fSeas,'var(--f4)')}</td>
     <td class="l">${s.news?`<span class="pill ${s.news.tone==='Positive'?'pos':s.news.tone==='Mixed'?'mix':s.news.tone==='Negative'?'neg':''}">${esc(s.news.tone)}</span>`:'<span class="muted">–</span>'}</td>
     <td class="l">${s.setup?esc(s.setup):'<span class="muted">–</span>'}</td><td>${inr(s.close)}</td><td class="${cls(s.chg)}">${pct(s.chg)}</td><td class="${cls(s.r6m)}">${pct(s.r6m,0)}</td></tr>`;}).join('')||`<tr><td colspan="${COLS.length}" class="l" style="padding:24px">No stock matches “${esc(st.q)}”. Check the spelling or switch to All stocks.</td></tr>`;

@@ -2,14 +2,15 @@
 """Red flags for the stocks the home page can rank near the top. Writes flags.json. Run nightly after news_fund.py.
 
 Stocks with any of these are removed from the top 10 (they stay in the full table, marked):
-- under NSE surveillance (ASM or GSM list), or in a price band of 5% or less (they can get stuck at the band and be hard to sell);
+- on NSE's GSM surveillance list, or in a price band of 5% or less (they can get stuck at the band and be hard to sell);
 - a net loss in the latest quarter (from the company numbers read nightly);
 - more than 25% of promoter shares pledged.
 Warnings (shown, not removed):
+- on NSE's ASM list (triggered by big price moves, so common among momentum leaders: no leverage, sharp swings);
 - quarterly results due within 7 days (prices often jump either way on results);
 - promoters cut their stake by 2 percentage points or more last quarter;
-- 10-25% of promoter shares pledged;
-- price to earnings above 100.
+- 10-25% of promoter shares pledged.
+(High valuation is already flagged on the page.)
 Every source is optional: if NSE blocks a request the other checks still run, and flags.json records what was checked.
 """
 import os, sys, json, re, time, io, csv, datetime as dt, urllib.request, http.cookiejar
@@ -84,6 +85,7 @@ def pledge(sym):
     for k, v in r.items():   # percent of promoter shares pledged
         kl = k.lower()
         if 'perc' in kl and 'pledg' in kl and ('promoter' in kl or 'prom' in kl or kl.endswith('pledged')):
+            LOG.setdefault('pledge_field', k); LOG.setdefault('pledge_sample', {kk: r[kk] for kk in list(r)[:16]})
             try: return float(str(v).replace(',', ''))
             except Exception: pass
     LOG.setdefault('pledge_keys', list(r.keys())[:30])
@@ -113,7 +115,9 @@ def main():
     flags = {}
     for s in D['stocks']:
         sym = s['sym']; ex, wn = [], []
-        if sym in SURV: ex.append(f"Under NSE surveillance ({' and '.join(SURV[sym])})")
+        sv = SURV.get(sym, [])
+        if 'GSM' in sv: ex.append('On NSE\'s GSM surveillance list (graded measures for suspicious price moves)')
+        if 'ASM' in sv: wn.append('On NSE\'s ASM list after big price moves: buy with full cash (no leverage) and expect sharp swings')
         b = BAND.get(sym)
         if b is not None and b <= 5: ex.append(f'Price band of {b:g}%: it can get stuck at the limit and be hard to sell')
         f = SC.get(sym) or {}
@@ -125,10 +129,9 @@ def main():
         if rd is not None and (rd - TODAY).days <= 7: wn.append(f"Results due on {rd:%d %b}: the price often jumps either way")
         pr = f.get('prom')
         if isinstance(pr, list) and len(pr) == 2 and None not in pr and pr[0] - pr[1] >= 2: wn.append(f'Promoters cut their stake from {pr[0]:g}% to {pr[1]:g}% last quarter')
-        if f.get('pe') is not None and f['pe'] > 100: wn.append(f"Very expensive: price to earnings {f['pe']:.0f}")
         if ex or wn: flags[sym] = dict(ex=ex, warn=wn)
     out = dict(asof=f'{TODAY:%d %b %Y}', checked=LOG['checked'], counts=dict(bands=len(BAND), surveillance=len(SURV), results=len(RES), pledge=len(PL), candidates=len(cand)),
-               flags=flags, errors=LOG['errors'][:10], pledge_keys=LOG.get('pledge_keys'))
+               flags=flags, errors=LOG['errors'][:10], pledge_keys=LOG.get('pledge_keys'), pledge_field=LOG.get('pledge_field'), pledge_sample=LOG.get('pledge_sample'))
     json.dump(out, open(os.path.join(ROOT, 'flags.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
     print(json.dumps({k: v for k, v in out.items() if k != 'flags'}, ensure_ascii=False))
     print('excluded:', {k: v['ex'] for k, v in flags.items() if v['ex'] and k in cand})
