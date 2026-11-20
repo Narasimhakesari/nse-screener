@@ -8,6 +8,7 @@ The home page (index.html) scores every actively traded NSE stock after each clo
 - Leaves out red-flag stocks (`build/redflags.py` -> `flags.json`, nightly): NSE GSM surveillance, price bands of 5% or less, a loss last quarter, over 25% of promoter shares pledged. ASM listing, results due within 7 days, promoter selling and 10-25% pledges are shown as warnings.
 - Market filter: when an equal-weight index of the 300 most-traded stocks is below its 100-day average, the page says hold cash (`build/backtest_improve20.py` -> `improve_log.txt`). Monthly top 10 with the industry limit: 24.6% a year, worst fall -30% with the 100-day filter; 19.1% and -47% with a 200-day filter; 25.5% and -69% never in cash. Any length from 75 to 125 days gave similar results. Market: 10.2% a year, worst fall -75%.
 - Also tested and rejected: holding 15 or 20, a buffer before selling, 12+6-month momentum, trailing stops of 15-20%, reviewing every 10 trading days.
+- Second round (`build/backtest_improve2.py` -> `improve2_log.txt`, `rebalday_log.txt`): a daily market filter, inverse-volatility sizing and four staggered parts did not help; double costs still gave 23.4%; a walk-forward choice of the filter length picked 100 days in every period. Rebalancing 1-3 days off month-end gave 19-23% a year with worst falls of 35-40% (median over shifts 19.8%), so about 20% a year is the realistic expectation, not 24.6%.
 - Within 10% of the 52-week high was tested and rejected (18.3% a year).
 
 
