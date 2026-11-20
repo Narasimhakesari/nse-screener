@@ -1,0 +1,18 @@
+old-format files: 0 of 0 weekdays from 2006-01-01 to 2021-09-06 (0s)
+skip 20220808.csv Error tokenizing data. C error: Expected 1 fields in line 5, saw 2
+
+falls over 25%: 4178; decided with Yahoo split history: 883; by price rules: 3295; adjusted: 3719
+rows 7407126 symbols 4084 adjustments 3719
+panel (5154, 4084) 2006-01-02 2026-11-20
+Current: 100-day filter, checked at month-end                        24.6% worst  -30.4% sharpe 1.23 | periods [28.0, 18.3, 24.9, 28.9]
+Filter checked every day                                             20.4% worst  -34.7% sharpe 1.10 | periods [28.2, 11.0, 25.8, 20.0] | beats current in 2/4
+Sizes by inverse volatility                                          23.8% worst  -29.4% sharpe 1.27 | periods [28.9, 15.5, 24.2, 28.9] | beats current in 1/4
+Filter checked every day + inverse volatility                        18.4% worst  -33.0% sharpe 1.07 | periods [23.8, 9.8, 22.7, 19.7] | beats current in 0/4
+Double costs (0.3% each side)                                        23.4% worst  -31.3% sharpe 1.18 | periods [27.3, 17.1, 23.7, 27.3] | beats current in 0/4
+Double costs, filter checked every day                               17.9% worst  -38.8% sharpe 0.99 | periods [25.9, 8.7, 23.2, 17.0] | beats current in 0/4
+Four staggered parts                                                 17.7% worst  -36.9% sharpe 0.97 | periods [20.3, 12.9, 14.1, 21.7] | beats current in 0/4
+Four staggered parts, filter checked every day                       17.5% worst  -38.2% sharpe 0.99 | periods [26.0, 10.4, 20.1, 18.2] | beats current in 0/4
+
+WALK-FORWARD filter length chosen from earlier years only: [('2007-2010 (incl. the 2008 crash)', 100), ('2011-2015', 100), ('2016-2020 (incl. the 2020 crash)', 100), ('2021-2026', 100)]
+walk-forward returns by period: [28.0, 18.3, 24.9, 28.9] | fixed 100-day: [28.0, 18.3, 24.9, 28.9]
+wrote improve2_bt.json
