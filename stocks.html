@@ -132,6 +132,22 @@ th,td{text-align:left;padding:7px 8px;border-top:1px solid var(--line);vertical-
 th{color:var(--muted);font-weight:600;border-top:0}
 td.r,th.r{text-align:right}
 tr.me td{background:var(--gain-soft)}
+.caution{margin-top:16px;font-size:14.5px;color:var(--mari-ink);background:var(--mari-soft);border-radius:12px;padding:10px 14px;max-width:60ch}
+.allbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.allbar input{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--page)}
+.seg{display:flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:8px 12px;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.seg button:focus-visible,.allbar input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.tw{overflow-x:auto;max-height:620px;overflow-y:auto}
+#alltab th{position:sticky;top:0;background:var(--surface)}
+#alltab td .sub{font-size:12px;color:var(--muted)}
+#alltab a{color:inherit;text-decoration:none;font-weight:600}
+#alltab a:hover{text-decoration:underline}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;margin:2px 4px 0 0;white-space:nowrap}
+.tag.new{background:var(--gain-soft);color:var(--gain)} .tag.own{background:var(--brand-soft);color:var(--brand)} .tag.q{background:var(--mari-soft);color:var(--mari-ink)}
+.ticket .extra{margin-top:6px;font-size:13.5px;color:var(--mari-ink)}
+@media (max-width:600px){#alltab th:nth-child(5),#alltab td:nth-child(5),#alltab th:nth-child(7),#alltab td:nth-child(7){display:none}}
 ol.steps{margin:0;padding-left:20px;color:var(--ink2);font-size:15px}
 ol.steps li{margin:0 0 10px;padding-left:4px}
 ol.steps b{color:var(--ink)}
@@ -163,6 +179,7 @@ ol.steps b{color:var(--ink)}
     <h1 id="headline">Loading tonight's trades</h1>
     <p id="lede">Each evening the agent picks NSE stocks that have just joined the 50 strongest of the past year. You buy at the next open and place one GTT order in Zerodha: <b>+20% target, −8% stop-loss</b>. Your broker sells automatically when either is hit. Anything still open after 30 trading days, you sell. Up to 5 trades at a time.</p>
     <div class="slots" id="slots" aria-live="polite"></div>
+    <p class="caution"><b>Read this first.</b> This rule did well from 2021 to 2026 but failed a 20-year test: 3.7% a year from 2007 to 2026, against 10.1% for the market, with losing stretches in 2007–10, 2011–15 and 2016–20 (long_log.txt in the repository). Use small amounts.</p>
   </div>
 
   <section aria-labelledby="h-buy">
@@ -179,6 +196,18 @@ ol.steps b{color:var(--ink)}
     <div class="sh"><h2 id="h-open">Open trades</h2><p id="opennote"></p></div>
     <div class="rows" id="open"></div>
     <p class="note" id="closednote"></p>
+  </section>
+
+  <section aria-labelledby="h-all">
+    <div class="sh"><h2 id="h-all">All momentum stocks</h2><p id="allnote"></p></div>
+    <div class="card">
+      <div class="allbar">
+        <input type="search" id="allq" placeholder="Search a stock or sector" aria-label="Search a stock or sector">
+        <div class="seg" role="group" aria-label="How many to show"><button type="button" data-n="50" aria-pressed="true">Top 50</button><button type="button" data-n="0" aria-pressed="false">All ranked</button></div>
+      </div>
+      <div class="tw"><table id="alltab"></table></div>
+      <p class="note">Rank among the 300 most-traded NSE stocks by 12-month return (leaving out the latest month), divided by how much the price swings. A stock gives a buy signal on the day it first enters the top 50, if it was not in the top 50 in the 20 days before.</p>
+    </div>
   </section>
 
   <section aria-labelledby="h-how">
@@ -238,11 +267,6 @@ $('#theme').addEventListener('click',()=>{const dark=document.documentElement.da
 
 const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
 const [D,X,AUTO,HIST,IDEAS]=await Promise.all(['data.json','exits_bt.json','auto.json','history.json','ideas_bt.json'].map(get));
-if(true){ // paused
-  $('#hdate').textContent='Paused on 19 November 2026';
-  $('#headline').textContent='This page is paused';
-  $('#lede').innerHTML='Its trading rule (buy stocks newly in the momentum top 50, sell at +20% or −8%, or after 30 days) did well from 2021 to 2026 but failed a 20-year test: <b>3.7% a year from 2007 to 2026, against 10.1% for the market</b>, with losses in each of 2007–10, 2011–15 and 2016–20. There are no new signals and no alerts. Do not trade from it. The full test is in long_log.txt in this repository.';
-  document.querySelectorAll('section').forEach(s=>s.hidden=true);$('#slots').hidden=true;$('#asof').textContent='';return;}
 if(!X.live||!D.stocks){$('#headline').textContent='The data did not load';$('#lede').textContent='Reload the page in a minute; the nightly refresh may be updating it.';return;}
 const BY=Object.fromEntries(D.stocks.map(s=>[s.sym,s]));
 const L=X.live,R=X.rule,F=X.stats,B=X.bench,TP=Math.round(R.target*100),SP=Math.round(R.stop*100);
@@ -255,9 +279,9 @@ $('#newsAsof').textContent=AUTO.asof||'–';
 
 // ---------- hero ----------
 const sellT=L.open.filter(o=>o.sellTomorrow),used=L.open.length,free=R.maxpos-used+sellT.length;
-const nb=L.buys.length;
+const nb=L.buys.length,QU=L.queue||[],ALLB=L.buys.map(b=>({...b,extra:false})).concat(QU.map(b=>({...b,extra:true})));
 $('#hdate').textContent=`For ${dfull(addBiz(asof,1))}`;
-$('#headline').innerHTML=nb?`<span class="n">${nb}</span> ${nb===1?'stock':'stocks'} to buy${sellT.length?`, <span class="n">${sellT.length}</span> to sell`:''}`:sellT.length?`<span class="n">${sellT.length}</span> to sell, nothing to buy`:'Nothing to do tomorrow';
+$('#headline').innerHTML=nb?`<span class="n">${nb}</span> ${nb===1?'stock':'stocks'} to buy${sellT.length?`, <span class="n">${sellT.length}</span> to sell`:''}`:sellT.length?`<span class="n">${sellT.length}</span> to sell, nothing to buy`:QU.length?`<span class="n">${QU.length}</span> new ${QU.length===1?'signal':'signals'}, but all slots are full`:'Nothing to do tomorrow';
 $('#slots').innerHTML=Array.from({length:R.maxpos},(_,i)=>`<i class="${i<used-sellT.length?'on':i<used?'':'free'}"></i>`).join('')+`<span>${used} of ${R.maxpos} trade slots in use${sellT.length?`, ${sellT.length} freeing up tomorrow`:''}</span>`;
 
 // ---------- buy tickets ----------
@@ -276,10 +300,10 @@ function reason(b){const s=BY[b.sym],bits=[`Joined the 50 strongest stocks of th
   const sc=(AUTO.sc||{})[b.sym];if(sc&&sc.np!=null&&sc.np<0)r+=` <span class="w">The company made a loss last quarter.</span>`;
   return r;}
 const sellBy=addBiz(asof,R.days+1);
-$('#buynote').textContent=nb?`From the close on ${dshort(asof)}`:'';
-$('#buys').innerHTML=nb?L.buys.map(b=>{const s=BY[b.sym],px=b.close;
+$('#buynote').textContent=ALLB.length?`From the close on ${dshort(asof)}${QU.length?`. Every signal is shown; ${QU.length} ${QU.length===1?'is':'are'} beyond the ${R.maxpos} slots`:''}`:'';
+$('#buys').innerHTML=ALLB.length?ALLB.map(b=>{const s=BY[b.sym],px=b.close;
   return `<article class="ticket" data-px="${px}">
-   <div class="head"><div class="who"><div class="nm">${name(b.sym)}</div><div class="sym">${esc(b.sym)}${s?`, ${esc(s.sector)}`:''}</div><p class="why">${reason(b)}</p></div>
+   <div class="head"><div class="who"><div class="nm">${name(b.sym)}${b.extra?' <span class="tag q">No free slot</span>':''}</div><div class="sym">${esc(b.sym)}${s?`, ${esc(s.sector)}`:''}</div><p class="why">${reason(b)}</p>${b.extra?`<p class="extra">All ${R.maxpos} slots are full, so the tested rule skips this one. Take it only with money beyond your ${R.maxpos} trades.</p>`:''}</div>
     <div class="spark"><b>₹${inr(px)}</b>${s?`<span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}`:''}</div></div>
    <div class="levels"><div><small>Buy near</small><b data-b>₹${inr(px)}</b><em>at the open</em></div><div class="t"><small>Target +${TP}%</small><b data-t>₹${inr(tick(px*(1+R.target)))}</b><em>GTT limit</em></div><div class="s"><small>Stop-loss −${SP}%</small><b data-s>₹${inr(tick(px*(1-R.stop)))}</b><em>GTT market</em></div><div><small>Sell by</small><b>${sellBy.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</b><em>if neither hits</em></div></div>
    <details><summary>My buy price and how many shares</summary><div class="more"><div class="calc"><label>Your buy price ₹<input type="number" step="0.05" min="0" inputmode="decimal" placeholder="${px.toFixed(2)}" data-in></label><label>Your trading money ₹<input type="number" step="10000" min="0" inputmode="numeric" data-money value="${money()||''}"></label><output data-q>${qtyText(px)}</output></div><p style="font-size:13.5px">The target and stop-loss above update to your buy price. Those are the two numbers for the GTT.</p></div></details>
@@ -301,6 +325,23 @@ $('#opennote').innerHTML=keep.length?`Average ${pct(avg)} since bought`:'';
 $('#open').innerHTML=keep.length?keep.map(o=>row(o,false)).join(''):'<div class="row"><div class="sub">No open trades.</div></div>';
 const CT=L.closedToday||[],WHY={target:'hit its target',stop:'hit its stop-loss',time:`was sold on day ${R.days}`};
 $('#closednote').innerHTML=(CT.length?`Closed today: ${CT.map(c=>`${name(c.sym)} ${WHY[c.why]}, <b class="${cls(c.ret)}">${pct(c.ret)}</b>`).join('; ')}. `:'')+`If you are just starting, take only new buys. You can also join an open trade if its price is still close to where it was bought, using the same target, stop-loss and sell-by date.`;
+
+// ---------- all momentum stocks ----------
+(function(){
+  const fresh=new Set(L.freshToday||[]),own=new Set(L.open.map(o=>o.sym)),qd=new Set(QU.map(q=>q.sym));
+  const ranked=D.stocks.filter(s=>s.mrank).sort((a,b)=>a.mrank-b.mrank);
+  let lim=50;
+  $('#allnote').textContent=`${ranked.length} stocks ranked, ${fresh.size} new in the top 50 today`;
+  function draw(){
+    const q=$('#allq').value.trim().toLowerCase();
+    const rows=ranked.filter(s=>(!lim||s.mrank<=lim)&&(!q||s.sym.toLowerCase().includes(q)||(s.name||'').toLowerCase().includes(q)||(s.sector||'').toLowerCase().includes(q)));
+    $('#alltab').innerHTML=`<thead><tr><th class="r">Rank</th><th>Stock</th><th class="r">Price</th><th class="r">Today</th><th class="r">1 month</th><th class="r">12 months</th><th class="r">From 52-week high</th></tr></thead><tbody>${rows.map(s=>{
+      const tags=(fresh.has(s.sym)?'<span class="tag new">New in top 50 today</span>':'')+(own.has(s.sym)?'<span class="tag own">Open trade</span>':'')+(qd.has(s.sym)?'<span class="tag q">No free slot</span>':'');
+      return `<tr><td class="r">${s.mrank}</td><td><a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">${name(s.sym)}</a><div class="sub">${esc(s.sym)}, ${esc(s.sector||'')}</div>${tags}</td><td class="r">₹${inr(s.close)}</td><td class="r"><span class="${cls(s.chg)}">${pct(s.chg)}</span></td><td class="r"><span class="${cls(s.r1m)}">${pct(s.r1m,0)}</span></td><td class="r"><span class="${cls(s.r12m)}">${pct(s.r12m,0)}</span></td><td class="r">${pct(s.offHigh,0)}</td></tr>`;}).join('')||'<tr><td colspan="7">No stock matches that search.</td></tr>'}</tbody>`;}
+  $('#allq').addEventListener('input',draw);
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{lim=+b.dataset.n;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));draw();}));
+  draw();
+})();
 
 // ---------- results ----------
 const yrs=(new Date(X.end)-new Date(X.start))/31557600000;

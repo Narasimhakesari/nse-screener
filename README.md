@@ -33,7 +33,7 @@ Not investment advice.
 Alerts: `build/options_notify.py` messages the evening before the entry day, on the entry evening and on expiry
 evening, using the repository secrets below.
 
-The earlier stock pages are paused (stocks.html; `build/backtest_20y.py` and `long_log.txt` show why).
+The stock momentum page (stocks.html) is live again from 20 Nov 2026, refreshed by `.github/workflows/refresh.yml` every weekday at 8:37 pm IST. It shows every buy signal (including ones beyond the 5 trade slots) and the full momentum ranking. Its rule failed the 20-year test (`build/backtest_20y.py`, `long_log.txt`), and the page says so.
 
 ## Alerts (optional)
 `build/notify.py` records every trade the page signals in `history.json` (the page's live record). It sends a message on evenings with something to do:
