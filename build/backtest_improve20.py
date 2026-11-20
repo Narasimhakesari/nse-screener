@@ -42,7 +42,10 @@ secv = np.array([SEC.get(s, '_' + s) for s in C.columns])
 bidx = (1 + bret).cumprod()
 FILT = {k: (bidx > bidx.rolling(k, min_periods=int(k * .75)).mean()).values for k in (50, 75, 100, 125, 150, 200)}
 
-def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap=2, lo=None, hi=None):
+VOL = vol.values
+
+def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap=2, lo=None, hi=None, daily=False, wt='eq', offset=0, cost=None):
+    COST_ = COST if cost is None else cost
     lo = START if lo is None else lo; hi = n - 1 if hi is None else hi
     Sv = score.values; up = np.ones(n, bool) if filt is None else FILT[filt]
     buf = buf or N
@@ -52,9 +55,9 @@ def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap
         for j in list(pos):
             p = pos[j]; o = Ov[i, j]
             if not np.isfinite(Cv[i, j]) and i > p['bi']:
-                cash += p['sh'] * p['lc'] * (1 - COST); del pos[j]; continue
+                cash += p['sh'] * p['lc'] * (1 - COST_); del pos[j]; continue
             if j in sells and np.isfinite(o):
-                cash += p['sh'] * o * (1 - COST); del pos[j]
+                cash += p['sh'] * o * (1 - COST_); del pos[j]
         sells = set()
         eqv = cash + sum(p['sh'] * p['lc'] for p in pos.values())
         for j, slot in pend:
@@ -62,14 +65,17 @@ def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap
             if j in pos or not np.isfinite(o) or o <= 0: continue
             val = min(cash, eqv * slot)
             if val < eqv * slot * 0.5: continue
-            cash -= val; pos[j] = dict(sh=val / (o * (1 + COST)), bi=i, lc=o, pk=o)
+            cash -= val; pos[j] = dict(sh=val / (o * (1 + COST_)), bi=i, lc=o, pk=o)
         pend = []
         for j, p in pos.items():
             c = Cv[i, j]
             if np.isfinite(c): p['lc'] = c; p['pk'] = max(p['pk'], c)
             if trail and p['lc'] < p['pk'] * (1 - trail): sells.add(j)
         eqv = cash + sum(p['sh'] * p['lc'] for p in pos.values()); eq.append(eqv)
-        review = ISME[i] if not every else ((i - lo) % every == every - 1)
+        review = ISME[i] if not every else ((i - lo) % every == (every - 1 + offset) % every)
+        if daily:
+            if not up[i] and pos and not half: sells |= set(pos); continue
+            if up[i] and i > 0 and not up[i - 1] and not pos: review = True
         if not review: continue
         k = N if up[i] else (N // 2 if half else 0)
         if k == 0:
@@ -89,7 +95,12 @@ def sim(score, N=10, buf=None, filt=200, half=False, trail=None, every=None, cap
             cnt[secv[j]] = cnt.get(secv[j], 0) + 1; new.append(j)
         for j in pos:
             if j not in keep: sells.add(j)
-        pend = [(j, 1.0 / N) for j in new]
+        if wt == 'invvol' and new:
+            iv = {j: 1 / VOL[i, j] if np.isfinite(VOL[i, j]) and VOL[i, j] > 0 else 0 for j in new}
+            tot = sum(iv.values()) or 1; share = len(new) / N
+            pend = [(j, iv[j] / tot * share) for j in new]
+        else:
+            pend = [(j, 1.0 / N) for j in new]
     return pd.Series(eq, index=dates[lo:hi + 1])
 
 def evaluate(**kw):
