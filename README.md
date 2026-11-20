@@ -6,7 +6,8 @@ The home page (index.html) scores every actively traded NSE stock after each clo
 - Ranks the 300 most-traded stocks above their 200-day average by momentum (12-month return skipping the last month, divided by volatility). Mixing in trend, seasonality and swing setups did worse (14.9% a year for the Balanced mix against 25.9% for momentum alone).
 - Takes at most 2 stocks from one industry (a small gain in every version tested).
 - Leaves out red-flag stocks (`build/redflags.py` -> `flags.json`, nightly): NSE GSM surveillance, price bands of 5% or less, a loss last quarter, over 25% of promoter shares pledged. ASM listing, results due within 7 days, promoter selling and 10-25% pledges are shown as warnings.
-- Market filter: when an equal-weight index of the 300 most-traded stocks is below its 200-day average, the page says hold cash. Monthly top 10 with the industry limit: 26.3% a year, worst fall -67% always invested; 20.8% a year, worst fall -41% with the filter. Market: 10.2% a year, worst fall -75%.
+- Market filter: when an equal-weight index of the 300 most-traded stocks is below its 100-day average, the page says hold cash (`build/backtest_improve20.py` -> `improve_log.txt`). Monthly top 10 with the industry limit: 24.6% a year, worst fall -30% with the 100-day filter; 19.1% and -47% with a 200-day filter; 25.5% and -69% never in cash. Any length from 75 to 125 days gave similar results. Market: 10.2% a year, worst fall -75%.
+- Also tested and rejected: holding 15 or 20, a buffer before selling, 12+6-month momentum, trailing stops of 15-20%, reviewing every 10 trading days.
 - Within 10% of the 52-week high was tested and rejected (18.3% a year).
 
 

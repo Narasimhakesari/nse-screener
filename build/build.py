@@ -210,7 +210,7 @@ for x in stocks:
     x['e20']=r2(last_e20[s_]) if np.isfinite(last_e20[s_]) else None
     x['trade']=TRADE.get(s_)
 b=breadth.iloc[-120:]
-eqi=(1+ret.where(liqF.shift(1).fillna(False)).mean(axis=1).fillna(0)).cumprod(); eqa=eqi.rolling(200,min_periods=150).mean()
+eqi=(1+ret.where(liqF.shift(1).fillna(False)).mean(axis=1).fillna(0)).cumprod(); eqa=eqi.rolling(100,min_periods=75).mean()  # market filter: 100 days tested best (backtest_improve20.py)
 MKT=dict(above=bool(eqi.iloc[-1]>eqa.iloc[-1]),gap=r2((eqi.iloc[-1]/eqa.iloc[-1]-1)*100),idx=[r2(v/eqi.iloc[-120]*100) for v in eqi.iloc[-120:]],avg=[r2(v/eqi.iloc[-120]*100) for v in eqa.iloc[-120:]])
 bt=dict(breadth=[r2(v) for v in b],bavg=[r2(v) for v in bavg.iloc[-120:]],rising=rising,bnow=round(float(breadth.iloc[-1]),1),nrank=len(sc),mkt=MKT)
 SC={}; scasof=None
