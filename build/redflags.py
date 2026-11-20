@@ -82,7 +82,13 @@ def pledge(sym):
     rows = d.get('data') if isinstance(d, dict) else d
     if not rows: return None
     r = rows[0]
-    for k, v in r.items():   # percent of promoter shares pledged
+    num = lambda x: float(str(x).replace(',', '').strip())
+    try:   # NSE gives pledged shares as a % of all shares; the promoter's share of that is what matters
+        tot, prom = num(r.get('percSharesPledged')), num(r.get('percPromoterHolding'))
+        LOG.setdefault('pledge_field', 'percSharesPledged / percPromoterHolding')
+        return round(tot / prom * 100, 1) if prom > 0 else None
+    except Exception: pass
+    for k, v in r.items():   # fallback: a field already stated as a percent of promoter shares
         kl = k.lower()
         if 'perc' in kl and 'pledg' in kl and ('promoter' in kl or 'prom' in kl or kl.endswith('pledged')):
             LOG.setdefault('pledge_field', k); LOG.setdefault('pledge_sample', {kk: r[kk] for kk in list(r)[:16]})
