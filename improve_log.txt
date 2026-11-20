@@ -1,0 +1,34 @@
+old-format files: 0 of 0 weekdays from 2006-01-01 to 2021-09-06 (0s)
+skip 20220808.csv Error tokenizing data. C error: Expected 1 fields in line 5, saw 2
+
+falls over 25%: 4178; decided with Yahoo split history: 883; by price rules: 3295; adjusted: 3719
+rows 7404594 symbols 4082 adjustments 3719
+panel (5153, 4082) 2006-01-02 2026-11-19
+MARKET 10.199999809265137% worst -74.5999984741211% periods [np.float32(10.6), np.float32(2.4), np.float32(7.3), np.float32(19.4)]
+Baseline: top 10, 2 per industry, cash below the 200-day average   19.1% worst  -47.4% sharpe 0.93 | periods [np.float64(14.7), np.float64(15.5), np.float64(25.9), np.float64(23.6)] | beats baseline in 0/4
+Hold 15                                                          17.4% worst  -46.4% sharpe 0.90 | periods [np.float64(18.4), np.float64(11.4), np.float64(24.7), np.float64(19.3)] | beats baseline in 1/4
+Hold 20                                                          16.3% worst  -48.5% sharpe 0.88 | periods [np.float64(17.4), np.float64(10.9), np.float64(27.0), np.float64(15.2)] | beats baseline in 2/4
+Buffer: keep until out of the top 20                             19.3% worst  -45.6% sharpe 0.94 | periods [np.float64(15.5), np.float64(12.3), np.float64(29.1), np.float64(24.1)] | beats baseline in 3/4
+Buffer: keep until out of the top 30                             19.3% worst  -44.9% sharpe 0.94 | periods [np.float64(17.1), np.float64(13.6), np.float64(28.1), np.float64(23.3)] | beats baseline in 2/4
+Market filter on the 150-day average                             20.2% worst  -34.3% sharpe 1.00 | periods [np.float64(20.8), np.float64(16.4), np.float64(19.9), np.float64(27.1)] | beats baseline in 3/4
+Market filter on the 100-day average                             24.6% worst  -30.4% sharpe 1.23 | periods [np.float64(28.0), np.float64(18.3), np.float64(24.9), np.float64(28.9)] | beats baseline in 3/4
+Half the stocks (not cash) below the 200-day average             24.2% worst  -56.1% sharpe 1.05 | periods [np.float64(13.2), np.float64(22.6), np.float64(33.4), np.float64(29.2)] | beats baseline in 3/4
+No market filter                                                 25.5% worst  -69.1% sharpe 1.00 | periods [np.float64(9.6), np.float64(27.9), np.float64(32.4), np.float64(33.2)] | beats baseline in 3/4
+Momentum: 12- and 6-month blend                                  18.0% worst  -52.7% sharpe 0.88 | periods [np.float64(17.3), np.float64(12.7), np.float64(25.4), np.float64(18.8)] | beats baseline in 1/4
+Momentum: plain 12-month return                                  19.4% worst  -45.3% sharpe 0.87 | periods [np.float64(18.9), np.float64(8.3), np.float64(34.6), np.float64(21.3)] | beats baseline in 2/4
+Trailing stop 15%                                                13.4% worst  -41.5% sharpe 0.80 | periods [np.float64(6.8), np.float64(12.7), np.float64(21.6), np.float64(15.1)] | beats baseline in 0/4
+Trailing stop 20%                                                15.6% worst  -41.2% sharpe 0.87 | periods [np.float64(10.0), np.float64(12.9), np.float64(23.8), np.float64(18.9)] | beats baseline in 0/4
+Review every 10 trading days                                     17.9% worst  -42.8% sharpe 0.89 | periods [np.float64(16.2), np.float64(12.0), np.float64(18.2), np.float64(18.4)] | beats baseline in 1/4
+
+changes that passed: ['Buffer: keep until out of the top 20', 'Market filter on the 150-day average', 'Market filter on the 100-day average']
+All passing changes together                                     22.9% worst  -34.5% sharpe 1.15 | periods [np.float64(25.3), np.float64(12.5), np.float64(27.2), np.float64(28.6)] | beats baseline in 3/4
+Buffer: keep until out of the top 20 + Market filter on the 15   18.6% worst  -37.8% sharpe 0.93 | periods [np.float64(19.3), np.float64(11.2), np.float64(21.6), np.float64(26.3)] | beats baseline in 2/4
+Buffer: keep until out of the top 20 + Market filter on the 10   22.9% worst  -34.5% sharpe 1.15 | periods [np.float64(25.3), np.float64(12.5), np.float64(27.2), np.float64(28.6)] | beats baseline in 3/4
+Market filter on the 150-day average + Market filter on the 10   24.6% worst  -30.4% sharpe 1.23 | periods [np.float64(28.0), np.float64(18.3), np.float64(24.9), np.float64(28.9)] | beats baseline in 3/4
+
+BY YEAR
+Baseline: top 10, 2 per industry, cash below the 200-day avera {2007: np.float64(69.5), 2008: np.float64(-34.7), 2009: np.float64(34.2), 2010: np.float64(17.5), 2011: np.float64(-11.9), 2012: np.float64(18.2), 2013: np.float64(-6.0), 2014: np.float64(100.3), 2015: np.float64(-8.6), 2016: np.float64(-13.1), 2017: np.float64(102.7), 2018: np.float64(-4.9), 2019: np.float64(-5.6), 2020: np.float64(86.7), 2021: np.float64(66.9), 2022: np.float64(-14.2), 2023: np.float64(45.5), 2024: np.float64(20.5), 2025: np.float64(12.8), 2026: np.float64(23.7)}
+All passing changes together                                   {2007: np.float64(71.2), 2008: np.float64(-23.8), 2009: np.float64(75.6), 2010: np.float64(6.5), 2011: np.float64(7.0), 2012: np.float64(16.3), 2013: np.float64(-5.6), 2014: np.float64(62.2), 2015: np.float64(-6.2), 2016: np.float64(-12.6), 2017: np.float64(108.4), 2018: np.float64(-8.5), 2019: np.float64(-3.5), 2020: np.float64(86.5), 2021: np.float64(61.4), 2022: np.float64(12.0), 2023: np.float64(46.8), 2024: np.float64(34.8), 2025: np.float64(10.1), 2026: np.float64(15.4)}
+market                                                         {2007: np.float32(78.2), 2008: np.float32(-66.1), 2009: np.float32(122.9), 2010: np.float32(11.9), 2011: np.float32(-38.8), 2012: np.float32(33.4), 2013: np.float32(-11.0), 2014: np.float32(48.6), 2015: np.float32(4.5), 2016: np.float32(2.3), 2017: np.float32(49.1), 2018: np.float32(-20.0), 2019: np.float32(-5.4), 2020: np.float32(23.4), 2021: np.float32(43.1), 2022: np.float32(0.3), 2023: np.float32(47.8), 2024: np.float32(21.3), 2025: np.float32(3.5), 2026: np.float32(6.7)}
+
+wrote improve_bt.json
