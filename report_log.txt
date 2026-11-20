@@ -6,22 +6,22 @@ rows 7407126 symbols 4084 adjustments 3719
 panel (5154, 4084) 2006-01-02 2026-11-20
 
 == As tested: 0.15% costs, cash earns nothing, before tax
-   24.6% a year | worst fall -30.4% | Sharpe 1.23 | Sortino 0.89 | periods [28.0, 18.3, 24.9, 28.9]
+   24.6% a year | worst fall -30.4% | Sharpe 1.23 | Sortino 1.76 | periods [28.0, 18.3, 24.9, 28.9]
    worst 12 months -20.3% | best 12 months 163.5% | 12-month spans that lost money 20.3% | worst 3 years 5.3% | longest below a previous peak 948 days | months up 49.6%
    trades a year 36.1 | trades that made money 53.9% | average trade 7.61% (wins 22.36%, losses -9.64%) | held 59.0 days on average, median 32.0 | held over a year 0.0% | turnover 361.0% a year
 
 == Realistic costs: 0.25% each side
-   23.7% a year | worst fall -30.9% | Sharpe 1.2 | Sortino 0.86 | periods [27.2, 17.5, 24.1, 27.8]
+   23.7% a year | worst fall -30.9% | Sharpe 1.2 | Sortino 1.71 | periods [27.2, 17.5, 24.1, 27.8]
    worst 12 months -20.7% | best 12 months 161.1% | 12-month spans that lost money 20.3% | worst 3 years 3.6% | longest below a previous peak 948 days | months up 49.2%
    trades a year 36.0 | trades that made money 53.1% | average trade 7.4% (wins 22.45%, losses -9.67%) | held 59.0 days on average, median 32.0 | held over a year 0.0% | turnover 360.0% a year
 
 == Realistic costs + cash in a liquid fund at 6%
-   26.6% a year | worst fall -30.5% | Sharpe 1.31 | Sortino 0.95 | periods [30.2, 20.7, 27.2, 30.4]
+   26.6% a year | worst fall -30.5% | Sharpe 1.31 | Sortino 1.88 | periods [30.2, 20.7, 27.2, 30.4]
    worst 12 months -17.5% | best 12 months 161.7% | 12-month spans that lost money 16.7% | worst 3 years 16.2% | longest below a previous peak 935 days | months up 80.3%
    trades a year 36.0 | trades that made money 53.1% | average trade 7.4% (wins 22.45%, losses -9.67%) | held 59.0 days on average, median 32.0 | held over a year 0.0% | turnover 360.0% a year
 
 == Realistic costs + liquid fund + tax (what you keep)
-   22.6% a year | worst fall -31.9% | Sharpe 1.12 | Sortino 0.8 | periods [25.5, 17.9, 24.6, 25.9]
+   22.6% a year | worst fall -31.9% | Sharpe 1.12 | Sortino 1.57 | periods [25.5, 17.9, 24.6, 25.9]
    worst 12 months -22.6% | best 12 months 157.0% | 12-month spans that lost money 21.1% | worst 3 years 11.9% | longest below a previous peak 948 days | months up 76.9%
    trades a year 35.9 | trades that made money 53.2% | average trade 7.41% (wins 22.46%, losses -9.67%) | held 59.0 days on average, median 32.0 | held over a year 0.0% | turnover 359.0% a year
    best trades [['DIXON', '2020-07-01', 281.989990234375], ['ADANIGREEN', '2020-07-01', 269.9200134277344], ['EDUCOMP', '2007-05-03', 251.66000366210938], ['COREPROTEC', '2009-04-01', 219.4499969482422], ['TANLA', '2020-10-01', 205.27000427246094]] 
@@ -29,9 +29,9 @@ panel (5154, 4084) 2006-01-02 2026-11-20
 
 time in cash (share of month-ends) 39.7%
 
-Equal-weight 300 most-traded, price only: 10.199999809265137% | worst -74.5999984741211% | Sharpe 0.54 | Sortino 0.48 | worst 12m -66.2%
-NIFTY 50 (price index, from 2007-09-17): 9.5% | worst -59.9% | Sharpe 0.56 | Sortino 0.55 | worst 12m -52.2% | add about 1.2-1.5% a year for dividends (total return index)
-NIFTY 500 (price index, from 2007-01-16): 10.4% | worst -64.3% | Sharpe 0.61 | Sortino 0.57 | worst 12m -57.1% | add about 1.2-1.5% a year for dividends (total return index)
+Equal-weight 300 most-traded, price only: 10.199999809265137% | worst -74.5999984741211% | Sharpe 0.54 | Sortino 0.73 | worst 12m -66.2%
+NIFTY 50 (price index, from 2007-09-17): 9.5% | worst -59.9% | Sharpe 0.56 | Sortino 0.8 | worst 12m -52.2% | add about 1.2-1.5% a year for dividends (total return index)
+NIFTY 500 (price index, from 2007-01-16): 10.4% | worst -64.3% | Sharpe 0.61 | Sortino 0.85 | worst 12m -57.1% | add about 1.2-1.5% a year for dividends (total return index)
 
 MONTE CARLO (10,000 reshuffled 20-year paths, realistic costs, before tax): yearly return 5th/50th/95th percentile 16.6% / 27.2% / 39.4%
    worst fall 5th/50th/95th (worst/typical/mildest) -37.2% / -24.4% / -17.2% | chance of a fall over 40% 2.6%, over 50% 0.3% | chance of some 3-year stretch losing money 53.2% | chance of under 10% a year 0.2%
