@@ -29,7 +29,7 @@ def bounds():
 
 def metrics(e, trades=None):
     s = stats(e); r = e.pct_change().dropna()
-    dn = r[r < 0]; s['sortino'] = round(float(r.mean() / (np.sqrt((dn ** 2).mean())) * 252 ** .5), 2) if len(dn) else None
+    dd_ = np.sqrt((np.minimum(r, 0) ** 2).mean()); s['sortino'] = round(float(r.mean() / dd_ * 252 ** .5), 2) if dd_ > 0 else None  # downside deviation over all days
     m = e.resample('ME').last(); r12 = m.pct_change(12).dropna()
     s['worst12m'] = round(float(r12.min()) * 100, 1); s['best12m'] = round(float(r12.max()) * 100, 1)
     s['neg12m_share'] = round(float((r12 < 0).mean()) * 100, 1)
