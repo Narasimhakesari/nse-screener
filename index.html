@@ -247,7 +247,7 @@ dialog.drawer[open]{animation:slide .22s ease-out}
   <div class="hero">
     <div>
       <h1 id="headline">Today's best-scoring NSE stocks</h1>
-      <p class="lede">The agent reads every actively traded NSE stock after each market close and scores it on six things: momentum, trend, company results, seasonality, news and swing setups. Pick how you invest and it re-ranks the list. Tap any stock to see why.</p>
+      <p class="lede">The agent reads every actively traded NSE stock after each market close and checks six things: momentum, trend, company results, seasonality, news and swing setups. The default list ranks by momentum, the only part that held up in a 20-year test, and uses the rest as checks: stocks with red flags are left out and at most 2 come from one industry. Tap any stock to see why.</p>
     </div>
     <div class="mood" id="mood" aria-live="polite"></div>
   </div>
@@ -410,10 +410,10 @@ $('#asof').innerHTML=`<span>Prices from NSE close, </span>${esc(D.asof)}<br><spa
 $('#newsAsof').textContent=AUTO.asof||ST.newsAsof||ST.fundAsof||'';
 (function(){const b=BT,a=b.breadth,v=b.bavg,Wd=150,H=46,all=a.concat(v.filter(x=>x!=null)),lo=Math.min(...all)-1,hi=Math.max(...all)+1;
   const X=i=>2+i*(Wd-8)/(a.length-1),Y=x=>3+(hi-x)*(H-6)/(hi-lo),P=arr=>arr.map((x,i)=>x==null?'':(i&&arr[i-1]!=null?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('');
-  const calm=b.rising;
-  $('#mood').innerHTML=`<span class="tag ${calm?'calm':'care'}">${calm?'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l6-6 4 4 6-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Market mood: healthy':'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="currentColor"/></svg>Market mood: cautious'}</span>
+  const calm=MKT?MKT.above:b.rising;
+  $('#mood').innerHTML=`<span class="tag ${calm?'calm':'care'}">${calm?'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l6-6 4 4 6-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Market filter: invested':'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="currentColor"/></svg>Market filter: hold cash'}</span>
    <svg class="bsp" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Share of stocks above their 200-day average over the last ${a.length} days, against its 50-day average"><path d="${P(v)}" fill="none" stroke="var(--f2)" stroke-width="2"/><path d="${P(a)}" fill="none" stroke="var(--f1)" stroke-width="2"/><circle cx="${X(a.length-1)}" cy="${Y(a[a.length-1])}" r="3.5" fill="var(--f1)" stroke="var(--surface)" stroke-width="2"/></svg>
-   <p>${b.bnow}% of stocks are above their 200-day average, and that share is ${calm?'rising':'falling'}.${MKT?` <b>Market filter: ${MKT.above?'invested':'hold cash'}.</b> The 300 most-traded stocks, in equal amounts, are ${Math.abs(MKT.gap).toFixed(1)}% ${MKT.above?'above':'below'} their 200-day average.`:''}</p>
+   <p>${MKT?`The 300 most-traded stocks, in equal amounts, are ${Math.abs(MKT.gap).toFixed(1)}% ${MKT.above?'above':'below'} their 200-day average${MKT.above?', so the tested rule stays invested':', so the tested rule holds cash'}. `:''}${b.bnow}% of stocks are above their own 200-day average, and that share is ${b.rising?'rising':'falling'}.</p>
    <div class="lg"><span><i style="background:var(--f1)"></i>Stocks above 200-day average</span><span><i style="background:var(--f2)"></i>Its 50-day average</span></div>`;})();
 
 // ---------- controls ----------
@@ -578,8 +578,8 @@ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
     ['Balanced mix (price parts)','Balanced score (price parts) as on the page'],['Momentum style mix (price parts)','Momentum style score (price parts) as on the page']].filter(r=>R[r[1]]);
   const sg=x=>`<span class="${cls(x)}">${pct(x)}</span>`;
   $('#t20').innerHTML=`<thead><tr><th>Monthly top 10</th><th>Yearly return</th><th>Worst fall</th>${per.map(p=>`<th>${p}</th>`).join('')}</tr></thead><tbody>`+
-    rows.map(([lab,k],i)=>{const r=R[k];return `<tr${i===0?' class="me"':''}><td>${esc(lab)}</td><td><b class="${cls(r.cagr)}">${pct(r.cagr)}</b></td><td>${pct(r.dd)}</td>${r.periods.map(sg).join('')}</tr>`;}).join('')+
-    `<tr><td>The market: 300 most-traded stocks, equal amounts</td><td><b>${pct(B.cagr)}</b></td><td>${pct(B.dd)}</td>${(B.periods||[]).map(sg).join('')}</tr></tbody>`;
+    rows.map(([lab,k],i)=>{const r=R[k];return `<tr${i===0?' class="me"':''}><td>${esc(lab)}</td><td><b class="${cls(r.cagr)}">${pct(r.cagr)}</b></td><td>${pct(r.dd)}</td>${r.periods.map(x=>`<td>${sg(x)}</td>`).join('')}</tr>`;}).join('')+
+    `<tr><td>The market: 300 most-traded stocks, equal amounts</td><td><b>${pct(B.cagr)}</b></td><td>${pct(B.dd)}</td>${(B.periods||[]).map(x=>`<td>${sg(x)}</td>`).join('')}</tr></tbody>`;
   $('#t20note').textContent=`NSE prices from ${new Date(S20.start).getFullYear()} to ${new Date(S20.end).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}, including companies that later delisted. Each month-end, hold the 10 best-ranked of the 300 most-traded stocks above their 200-day average, in equal amounts, bought at the next open; 0.15% cost each way, before tax. Company results and news have no 20-year history, so they could not be tested; they are used here as checks and red flags instead of in the ranking. The mixes rank on momentum plus trend, seasonality and swing setups, and did worse than momentum alone.`;
   $('#t20box').hidden=false;})();
 
