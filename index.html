@@ -3,211 +3,586 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NIFTY weekly trade</title>
-<meta name="description" content="One tested NIFTY weekly options trade: sell the at-the-money straddle 2 trading days before expiry with far protective buys, updated every evening from NSE data.">
+<title>NSE Stock Agent</title>
+<meta name="description" content="Ranks NSE stocks every trading day on momentum, trend, fundamentals, seasonality, news and swing setups, and explains each pick in plain words.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:light;
-  --page:#f3f4f7; --surface:#fff; --sunk:#eceef3; --ink:#161b36; --ink2:#4b5270; --muted:#737993; --line:#e2e5ed; --line2:#cdd1dd;
-  --brand:#3441a8; --brand-soft:#e7e9f8; --mari:#f0a500; --mari-soft:#fdf3dc; --mari-ink:#7a5200;
-  --gain:#12804a; --gain-soft:#e2f3e9; --loss:#c33a2f; --loss-soft:#fbe7e4;
+  --page:#f3f4f7; --surface:#ffffff; --sunk:#eceef3; --ink:#161b36; --ink2:#4b5270; --muted:#7a809a; --line:#e2e5ed; --line2:#cdd1dd;
+  --brand:#3441a8; --brand-soft:#e7e9f8; --mari:#f0a500; --mari-ink:#7a5200;
+  --gain:#12804a; --loss:#c33a2f; --warn-bg:#fdf3dc; --warn-ink:#7a5200; --bad-bg:#fbe7e4; --good-bg:#e2f3e9;
+  --f1:#2a78d6; --f2:#eb6834; --f3:#1baf7a; --f4:#eda100; --f5:#e87ba4; --f6:#6250d6;
+  --pos:#2a78d6; --neg:#e34948; --grid:#e6e8ef;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif; --body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --shadow:0 18px 50px rgba(22,27,54,.18);
 }
-@media (prefers-color-scheme: dark){:root:where(:not([data-theme="light"])){
-  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8e94ad; --line:#272d4a; --line2:#363d60;
-  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-soft:#3a2f12; --mari-ink:#f5c45a; --gain:#3fc67a; --gain-soft:#15301f; --loss:#f07a6e; --loss-soft:#3d1d1c;}}
+@media (prefers-color-scheme: dark){ :root:where(:not([data-theme="light"])){
+  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8a90aa; --line:#272d4a; --line2:#363d60;
+  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-ink:#f5c45a;
+  --gain:#3fc67a; --loss:#f07a6e; --warn-bg:#3a2f12; --warn-ink:#f5c45a; --bad-bg:#3d1d1c; --good-bg:#15301f;
+  --f1:#3987e5; --f2:#d95926; --f3:#199e70; --f4:#c98500; --f5:#d55181; --f6:#9085e9; --pos:#3987e5; --neg:#e66767; --grid:#262c48; --shadow:0 18px 50px rgba(0,0,0,.5);}}
 :root[data-theme="dark"]{
-  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8e94ad; --line:#272d4a; --line2:#363d60;
-  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-soft:#3a2f12; --mari-ink:#f5c45a; --gain:#3fc67a; --gain-soft:#15301f; --loss:#f07a6e; --loss-soft:#3d1d1c;}
+  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8a90aa; --line:#272d4a; --line2:#363d60;
+  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-ink:#f5c45a;
+  --gain:#3fc67a; --loss:#f07a6e; --warn-bg:#3a2f12; --warn-ink:#f5c45a; --bad-bg:#3d1d1c; --good-bg:#15301f;
+  --f1:#3987e5; --f2:#d95926; --f3:#199e70; --f4:#c98500; --f5:#d55181; --f6:#9085e9; --pos:#3987e5; --neg:#e66767; --grid:#262c48; --shadow:0 18px 50px rgba(0,0,0,.5);}
 *{box-sizing:border-box}
-[hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--page);color:var(--ink);font:16px/1.55 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{background:var(--page);color:var(--ink);font:15px/1.5 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 a{color:var(--brand)}
-button,input{font:inherit;color:inherit}
+button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
-.wrap{max-width:780px;margin:0 auto;padding:0 20px 40px}
-h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.015em;text-wrap:balance}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(30px,4.4vw,48px);line-height:1.04;font-weight:800}
+h2{font-size:26px;line-height:1.15;font-weight:700}
+h3{font-size:17px;line-height:1.3;font-weight:700}
 p{margin:0}
-.muted{color:var(--muted)} .up{color:var(--gain)} .down{color:var(--loss)}
-.top{display:flex;align-items:center;gap:14px;padding:18px 0 6px}
-.mark{font:800 18px/1 var(--display);display:flex;align-items:center;gap:9px}
-.mark svg{width:24px;height:24px}
-.top .asof{margin-left:auto;color:var(--muted);font-size:13px;text-align:right;line-height:1.35}
-.iconbtn{border:1px solid var(--line2);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;flex:none}
-.hero{padding:30px 0 6px}
-.hero .date{font:600 15px var(--body);color:var(--muted)}
-.hero h1{font-size:clamp(38px,7.5vw,60px);line-height:1;font-weight:800;margin-top:4px}
-.hero h1 .n{color:var(--brand)}
-.hero p{margin-top:14px;color:var(--ink2);font-size:17px;max-width:62ch}
-section{margin-top:40px}
-.sh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
-.sh h2{font-size:24px;font-weight:700}
-.sh p{font-size:14px;color:var(--muted)}
-/* the trade slip: the one bold thing */
-.slip{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.slip .head{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;padding:16px 20px;border-bottom:1px solid var(--line)}
-.slip .head b{font:700 20px var(--display)}
-.slip .head span{font-size:14px;color:var(--ink2)}
-.leg{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;padding:13px 20px;border-top:1px solid var(--line)}
-.leg:first-of-type{border-top:0}
-.act{font:700 13px var(--body);text-align:center;border-radius:8px;padding:5px 0}
-.act.buy{background:var(--gain-soft);color:var(--gain)} .act.sell{background:var(--loss-soft);color:var(--loss)}
-.leg .k{font:700 24px/1.1 var(--display)}
-.leg .k small{font:500 13px var(--body);color:var(--muted);margin-left:8px}
-.leg .px{text-align:right;font-size:14px;color:var(--ink2)}
-.leg .px b{display:block;font:700 17px var(--display);color:var(--ink)}
-.sum{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
-.sum div{padding:12px 20px;border-left:1px solid var(--line)}
-.sum div:first-child{border-left:0}
-.sum small{display:block;font-size:12px;color:var(--muted);font-weight:600}
-.sum b{font:700 20px/1.25 var(--display)}
-.calc{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:end;padding:14px 20px;background:var(--sunk)}
-.calc label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted);font-weight:600}
-.calc input{width:170px;padding:8px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--surface)}
-.calc p{font-size:13.5px;color:var(--ink2);flex:1;min-width:220px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
-ol.steps{margin:0;padding-left:20px;color:var(--ink2);font-size:15px}
-ol.steps li{margin:0 0 10px;padding-left:4px}
-ol.steps b{color:var(--ink)}
-ul.risks{margin:0;padding-left:20px;color:var(--ink2);font-size:15px}
-ul.risks li{margin:0 0 8px}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{text-align:left;padding:8px;border-top:1px solid var(--line);vertical-align:top}
-th{color:var(--muted);font-weight:600;border-top:0;font-size:13px}
-td.r,th.r{text-align:right}
-tr.me td{background:var(--gain-soft)}
-.note{font-size:13.5px;color:var(--ink2);margin-top:12px}
-.foot{margin-top:44px;font-size:13px;color:var(--muted);display:grid;gap:8px}
+.muted{color:var(--muted)} .ink2{color:var(--ink2)}
+.up{color:var(--gain)} .down{color:var(--loss)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:16px;padding:18px 0}
+.mark{font:800 19px/1 var(--display);display:flex;align-items:center;gap:10px;letter-spacing:-.02em}
+.mark svg{width:26px;height:26px}
+.top .asof{margin-left:auto;color:var(--muted);font-size:13px;text-align:right}
+.iconbtn{border:1px solid var(--line2);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{background:var(--brand-soft)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px 40px;padding:28px 0 22px;align-items:end}
+.hero p.lede{margin-top:14px;color:var(--ink2);font-size:17px;max-width:56ch}
+.mood{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center}
+.mood .tag{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;padding:4px 10px;border-radius:999px}
+.mood .tag.calm{background:var(--good-bg);color:var(--gain)} .mood .tag.care{background:var(--warn-bg);color:var(--warn-ink)}
+.mood p{grid-column:1/-1;color:var(--ink2);font-size:14px}
+.mood svg.bsp{width:150px;height:46px}
+.mood .tag svg{width:14px;height:14px;flex:none}
+.mood .lg{grid-column:1/-1;display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.lg i{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+
+/* style picker */
+.styles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 6px}
+.style{border:1.5px solid var(--line2);background:var(--surface);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.style b{font:700 16px/1.2 var(--display)}
+.style span{font-size:13px;color:var(--ink2);line-height:1.35}
+.style:hover{border-color:var(--brand)}
+.style[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);box-shadow:inset 0 0 0 1px var(--brand)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px;font-size:14px;color:var(--ink2)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;padding:2px;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:999px;cursor:pointer;font-size:13.5px;color:var(--ink2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+select{max-width:230px}
+select,input[type=search],input[type=number]{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink)}
+.linkbtn{border:0;background:none;color:var(--brand);cursor:pointer;padding:0;font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.weights{display:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 20px}
+.weights.open{display:grid}
+.weights label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink2)}
+.weights label b{display:flex;align-items:center;gap:7px;color:var(--ink);font-weight:600}
+.weights input[type=range]{width:100%;accent-color:var(--brand)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+
+/* picks */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink2);margin:4px 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.picks{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.pick{display:grid;grid-template-columns:74px minmax(0,1.5fr) minmax(0,1.15fr) 92px 130px;gap:4px 22px;align-items:center;padding:16px 22px 16px 14px;border-top:1px solid var(--line);cursor:pointer;position:relative}
+.pick:first-child{border-top:0}
+.pick:hover{background:var(--sunk)}
+.pick .rk{font:800 52px/0.9 var(--display);color:var(--line2);text-align:right;letter-spacing:-.04em}
+.pick:nth-child(-n+3) .rk{color:var(--ink)}
+.pick .nm{font:700 19px/1.2 var(--display);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pick .nm small{font:500 12.5px var(--body);color:var(--muted)}
+.pick .why{font-size:13.5px;color:var(--ink2);margin-top:4px;line-height:1.4}
+.pick .why .c{color:var(--warn-ink)}
+.strip{display:flex;gap:2px;height:12px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.strip i{display:block;height:100%}
+.strip i:first-child{border-radius:4px 0 0 4px}
+.stripcap{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:5px}
+.score{text-align:right}
+.score b{font:800 34px/1 var(--display);display:block;letter-spacing:-.03em}
+.score span{font-size:12px;font-weight:600}
+.v-strong{color:var(--gain)} .v-good{color:var(--brand)} .v-watch{color:var(--warn-ink)} .v-avoid{color:var(--loss)}
+.px{text-align:right;font-size:14px}
+.px b{font-weight:600;display:block}
+.px svg{width:120px;height:30px;display:block;margin-left:auto;margin-top:4px}
+.more{display:flex;justify-content:center;padding:14px;border-top:1px solid var(--line)}
+.btn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--brand-soft);border-color:var(--brand)}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.empty{padding:36px;text-align:center;color:var(--ink2)}
+
+section{padding:44px 0 8px}
+.sechead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;margin-bottom:14px}
+.sechead p{color:var(--ink2);max-width:70ch}
+
+/* steps */
+.steps{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:2px solid var(--ink)}
+.steps li{padding:16px 22px 4px 0;display:grid;grid-template-columns:44px 1fr;gap:0 8px}
+.steps .n{font:800 34px/1 var(--display);color:var(--mari)}
+.steps p{color:var(--ink2);font-size:14px;margin-top:4px}
+
+/* table */
+.tbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:auto;max-height:720px}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:14px}
+th,td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--surface);font-weight:600;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none;z-index:1}
+th:hover,th.on{color:var(--ink)}
+th.l,td.l{text-align:left}
+tbody tr{cursor:pointer} tbody tr:hover{background:var(--sunk)}
+td .s{font-weight:700} td .n2{display:block;font-size:12px;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.mini{display:inline-block;width:38px;height:6px;border-radius:3px;background:var(--sunk);vertical-align:middle;margin-left:6px;overflow:hidden}
+.mini i{display:block;height:100%}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--ink2)}
+.pill.pos{background:var(--good-bg);color:var(--gain)} .pill.mix{background:var(--warn-bg);color:var(--warn-ink)} .pill.neg{background:var(--bad-bg);color:var(--loss)}
+
+/* evidence */
+.ev{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--line)}
+.ev>div{padding:16px 20px 16px 0;border-bottom:1px solid var(--line)}
+.ev h3{display:flex;align-items:center;gap:8px}
+.ev p{font-size:14px;color:var(--ink2);margin-top:6px}
+.grade{font:600 12px var(--body);padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap}
+.g-strong{background:var(--good-bg);color:var(--gain)} .g-some{background:var(--brand-soft);color:var(--brand)} .g-weak{background:var(--warn-bg);color:var(--warn-ink)} .g-none{background:var(--sunk);color:var(--ink2)}
+.chartbox{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 6px;margin-top:18px}
+.chartbox svg{display:block;width:100%;height:auto}
+svg text{font:11px var(--body);fill:var(--muted)}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:7px 10px;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.14);display:none;white-space:nowrap;z-index:5}
+.bt{width:100%;min-width:640px;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+.bt th{position:static;cursor:default;background:none}
+.bt td:first-child,.bt th:first-child{text-align:left;white-space:normal;min-width:240px}
+details{margin-top:14px} summary{cursor:pointer;font-weight:600;color:var(--brand)}
+.foot{padding:40px 0 56px;color:var(--muted);font-size:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 32px}
 .foot b{color:var(--ink2)}
+
+/* drawer */
+dialog.drawer{position:fixed;inset:0 0 0 auto;margin:0;height:100%;max-height:100%;width:min(720px,100%);border:0;padding:0;background:var(--page);color:var(--ink);box-shadow:var(--shadow)}
+dialog.drawer::backdrop{background:rgba(15,19,38,.45)}
+dialog.drawer[open]{animation:slide .22s ease-out}
+@keyframes slide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){dialog.drawer[open]{animation:none}}
+.dhead{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:16px 22px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;z-index:3}
+.dhead h2{font-size:24px}
+.dhead .acts{display:flex;gap:8px;align-items:start}
+.dhead .meta{color:var(--muted);font-size:13px}
+.dhead .pxl{font-size:15px}
+.dbody{padding:18px 22px 40px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card>h3{margin-bottom:10px}
+.verdict{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:center}
+.verdict .big{font:800 64px/0.9 var(--display);letter-spacing:-.04em;grid-row:span 2}
+.verdict .vl{font:700 20px/1.2 var(--display)}
+.verdict p{color:var(--ink2);font-size:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:14px}
+.ul li{display:grid;grid-template-columns:18px 1fr;gap:6px;line-height:1.4}
+.ul li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:6px}
+.ul.pro li::before{background:var(--gain)} .ul.con li::before{background:var(--mari)}
+.fbars{display:flex;flex-direction:column;gap:9px}
+.fbar{display:grid;grid-template-columns:120px 1fr 44px 74px;gap:10px;align-items:center;font-size:13.5px}
+.fbar .t{height:10px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.fbar .t i{display:block;height:100%;border-radius:4px}
+.fbar .w{color:var(--muted);font-size:12px;text-align:right}
+.fbar b{text-align:right}
+.kv{display:grid;grid-template-columns:1fr auto;gap:0;font-size:14px}
+.kv>*{padding:7px 0;border-bottom:1px solid var(--line)}
+.kv>*:nth-last-child(-n+2){border-bottom:0}
+.kv span{color:var(--ink2)} .kv b{text-align:right;font-weight:600}
+.calc{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:12px;align-items:end}
+.calc label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)}
+.calc input{width:130px}
+.calc output{flex-basis:100%;font-size:14px;color:var(--ink);background:var(--sunk);border-radius:10px;padding:10px 12px}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a{font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line2);text-decoration:none;background:var(--surface)}
+.links a:hover{background:var(--brand-soft)}
+.note{font-size:13px;color:var(--ink2);background:var(--warn-bg);border-radius:10px;padding:10px 12px}
+
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .styles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pick{grid-template-columns:56px minmax(0,1fr) 84px;gap:8px 14px}
+  .pick .rk{font-size:40px}
+  .pick .fs{grid-column:2/-1;grid-row:2}
+  .pick .px{display:none}
+  .ev{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr}
+}
 @media (max-width:600px){
-  .sum{grid-template-columns:1fr}
-  .sum div{border-left:0;border-top:1px solid var(--line)}
-  .sum div:first-child{border-top:0}
-  .sh{flex-direction:column;gap:2px}
-  .leg .k{font-size:21px}
-  table{font-size:13px}
+  .wrap{padding:0 14px}
+  .styles{grid-template-columns:1fr 1fr;gap:8px}
+  .style span{display:none}
+  .pick{grid-template-columns:40px minmax(0,1fr) 64px;padding:14px 14px 14px 6px}
+  .pick .rk{font-size:30px}
+  .pick .nm{font-size:17px}
+  .score b{font-size:26px}
+  .ev{grid-template-columns:1fr}
+  .two{grid-template-columns:1fr}
+  .fbar{grid-template-columns:96px 1fr 34px;}
+  .fbar .w{display:none}
+  .top .asof span{display:none}
+  .mood{grid-template-columns:1fr}
+  .verdict .big{font-size:52px}
+  .dhead{display:flex;flex-direction:column-reverse;gap:10px;padding:12px 16px}
+  .dhead .acts{justify-content:space-between}
+  .dhead h2{font-size:21px}
+  .dbody{padding:14px 12px 32px}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="mark"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--ink)"/><path d="M4 17c3 0 4-8 9-8s6 8 9 8" fill="none" stroke="var(--mari)" stroke-width="2.6" stroke-linecap="round"/></svg>NIFTY weekly trade</div>
+    <div class="mark"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--ink)"/><path d="M5 18l5-5 4 3 7-8" fill="none" stroke="var(--mari)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE Stock Agent</div>
     <div class="asof" id="asof"></div>
-    <button class="iconbtn" id="theme" type="button" aria-label="Switch light or dark theme"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor"/></svg></button>
+    <button class="iconbtn" id="theme" type="button" aria-label="Switch light or dark theme"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor"/></svg></button>
   </header>
 
   <div class="hero">
-    <p class="date" id="hdate"></p>
-    <h1 id="headline">Loading this week's trade</h1>
-    <p id="lede">One trade a week on NIFTY. On the second trading day before each weekly expiry, at about 3:15 pm, <b>sell the at-the-money call and put</b> and <b>buy a call about 4% above and a put about 4% below</b> as protection. Hold until 3:15 pm on expiry day, then close all four. The protective buys cap the most you can lose in one week.</p>
+    <div>
+      <h1 id="headline">Today's best-scoring NSE stocks</h1>
+      <p class="lede">The agent reads every actively traded NSE stock after each market close and scores it on six things: momentum, trend, company results, seasonality, news and swing setups. Pick how you invest and it re-ranks the list. Tap any stock to see why.</p>
+    </div>
+    <div class="mood" id="mood" aria-live="polite"></div>
   </div>
 
-  <section aria-labelledby="h-slip">
-    <div class="sh"><h2 id="h-slip">The four legs</h2><p id="slipnote"></p></div>
-    <div class="slip" id="slip"></div>
-  </section>
+  <div role="group" aria-label="How do you invest?">
+    <div class="styles" id="styles"></div>
+  </div>
+  <div class="toolbar">
+    <div class="seg" id="uni" role="group" aria-label="Which stocks to rank">
+      <button type="button" data-u="liq">300 most-traded</button><button type="button" data-u="all">All stocks</button><button type="button" data-u="watch">My watchlist</button>
+    </div>
+    <label>Sector <select id="sector"><option value="">All sectors</option></select></label>
+    <button type="button" class="linkbtn" id="wtoggle" aria-expanded="false" aria-controls="weights">Adjust the weights</button>
+  </div>
+  <div class="weights" id="weights"></div>
+
+  <div class="legend" id="legend" aria-label="Score colours"></div>
+  <ol class="picks" id="picks"></ol>
 
   <section aria-labelledby="h-how">
-    <div class="sh"><h2 id="h-how">How to place it in Zerodha Kite</h2></div>
-    <div class="card"><ol class="steps">
-      <li><b>On the entry day, at about 3:15 pm,</b> note NIFTY's level and type it into the box above. It gives the four strikes for the coming weekly expiry.</li>
-      <li><b>Buy the two protective legs first</b> (the far call and the far put), then sell the at-the-money call and put. Buying first gets you the lower, hedged margin. A Kite basket order can place all four together.</li>
-      <li><b>Leave it alone until 3:15 pm on expiry day</b>, then close all four legs. Do not add a stop-loss: the test had none, and the protective legs already cap the loss.</li>
-      <li><b>Use 1 lot per ₹2.5 lakh or so</b> in the account. The margin is about ₹1.5 lakh per lot, and a bad run in the test took about ₹90,000 off a lot before recovering.</li>
-      <li><b>If an NSE holiday falls in the week,</b> the entry day moves one trading day earlier. This page counts weekdays only, so check the exchange holiday list in holiday weeks.</li>
-    </ol></div>
+    <div class="sechead"><h2 id="h-how">How to use it</h2></div>
+    <ol class="steps">
+      <li><span class="n">1</span><div><h3>Choose your style</h3><p>Balanced suits most people. Momentum is the version tested on five years of data. Swing looks for 2 to 6 week trades. Long-term leans on company results.</p></div></li>
+      <li><span class="n">2</span><div><h3>Open a stock and read why</h3><p>Each stock shows what lifted its score, what to watch out for, its recent news and how it has done in the coming month in past years.</p></div></li>
+      <li><span class="n">3</span><div><h3>Plan the trade, then review monthly</h3><p>Use the stop-loss and position-size calculator so one bad trade costs about 1% of your money. Re-check the list after each month-end; sell what drops out.</p></div></li>
+    </ol>
   </section>
 
-  <section aria-labelledby="h-test">
-    <div class="sh"><h2 id="h-test">How it did</h2><p>1 lot, after costs, before tax</p></div>
-    <div class="card" style="overflow-x:auto" id="tested"></div>
-    <div class="card" style="overflow-x:auto;margin-top:12px" id="live"></div>
+  <section aria-labelledby="h-all">
+    <div class="sechead"><h2 id="h-all">Every stock</h2><p id="allnote"></p></div>
+    <div class="toolbar" style="margin-top:0"><label class="sr" for="q">Search stocks</label><input type="search" id="q" placeholder="Search name or symbol" autocomplete="off"><span id="cnt" class="muted"></span></div>
+    <div class="tbox"><table id="tbl"><thead></thead><tbody></tbody></table><div class="more" id="tmore" hidden><button type="button" class="btn" id="tmoreBtn">Show 50 more</button></div></div>
   </section>
 
-  <section aria-labelledby="h-risk">
-    <div class="sh"><h2 id="h-risk">Before you trade it</h2></div>
-    <div class="card"><ul class="risks">
-      <li><b>About 4 weeks in 10 lose money.</b> The worst single week in the test lost about ₹37,000 per lot, and losing runs lasted months.</li>
-      <li><b>The protective buys cost about half the profit</b> in the test, because NIFTY rarely moved 4% in two days. They are insurance against a crash bigger than anything from 2019 to 2026; without them that loss would be unlimited.</li>
-      <li><b>The test covers 2019–2026 only</b>, about 400 weekly trades. Weekly expiry days, lot sizes and margin rules have changed several times, and may change again.</li>
-      <li><b>Prices here are NSE closing prices</b>, which differ a little from 3:15 pm prices, and far strikes can be thin, so your fills may be worse.</li>
-      <li><b>Tax:</b> F&amp;O profits are business income, taxed at your slab rate. SEBI found about 9 in 10 individual F&amp;O traders lose money.</li>
-    </ul></div>
+  <section aria-labelledby="h-ev">
+    <div class="sechead"><h2 id="h-ev">Can you trust the score?</h2><p>Each part of the score was checked against past NSE prices. The weights follow the evidence: the strongest signals count most.</p></div>
+    <div class="ev" id="ev"></div>
+    <div class="chartbox"><h3 style="margin-bottom:4px">₹10 lakh in the Momentum 30 model against an equal-weight basket</h3><p class="muted" id="btnote" style="font-size:13px"></p><div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink2);margin:8px 0 4px"><span><i style="background:var(--f1)"></i>Momentum 30</span><span><i style="background:var(--f2)"></i>Momentum 30, in cash while market breadth falls</span><span><i style="background:var(--f3)"></i>300 most-traded stocks, equal weight</span></div><div id="eqc"></div><div class="tip" id="eqtip"></div>
+      <div style="overflow-x:auto"><table class="bt" id="bt1"></table></div>
+      <details><summary>Robustness checks and rules that failed</summary><div style="overflow-x:auto"><table class="bt" id="bt2"></table><table class="bt" id="bt3"></table></div>
+        <p class="muted" style="font-size:13px;margin-top:8px">Stocks that later delisted are included up to their last trading day. Five years includes a strong 2023 bull run, and momentum can fall hard when market leadership changes. Costs are 0.2% per round trip unless stated. Past results do not predict future ones.</p></details>
+    </div>
   </section>
 
   <footer class="foot">
-    <p><b>Not investment advice.</b> A rules-based example from public NSE data, for education. Not a recommendation and not research by a SEBI-registered analyst. Options can lose more than you expect.</p>
-    <p><b>Data.</b> NSE's daily F&amp;O file, read each weekday evening after about 8:30 pm IST. Tested on 15 years of NSE daily files and on Stockmock's minute data. <a href="stocks.html">Stock momentum page</a>.</p>
+    <p><b>Not investment advice.</b> This is a rules-based ranking from public data, not a recommendation to buy or sell. Prices are end-of-day, not live. Check the current price and the company's latest filings before you trade.</p>
+    <p><b>Data.</b> Prices: NSE end-of-day files, refreshed after 8:30 pm IST on trading days. Company numbers: Screener.in public pages for the top-ranked stocks, fetched nightly (Yahoo Finance fills gaps), plus MoneyWorks4Me for the Nifty 50; others count as neutral. News: each night the agent reads the top-ranked stocks' results, stock-exchange announcements and shareholding changes from Screener.in, plus Google News headlines; last run <span id="newsAsof"></span>.</p>
+    <p><b>Limits.</b> Small stocks move fast and can gap past a stop-loss. Seasonality uses at most five years per month. Splits and bonuses are detected from one-day price drops and adjusted; dividends are not.</p>
   </footer>
 </div>
+
+<dialog class="drawer" id="drawer" aria-labelledby="dname"></dialog>
+
 <script>
-(async function(){
+(async()=>{
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const inr=(x,d=0)=>x==null||!isFinite(x)?'–':x.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
-const rs=x=>x==null?'–':(x<0?'−':'')+'₹'+inr(Math.abs(x));
+const inr=(x,d=2)=>x==null||!isFinite(x)?'–':x.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=(x,d=1)=>x==null||!isFinite(x)?'–':(x>0?'+':x<0?'−':'')+Math.abs(x).toFixed(d)+'%';
 const cls=x=>x>0?'up':x<0?'down':'';
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-const dd=t=>new Date(t+'T00:00:00');
-const dlong=t=>dd(t).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-const dday=t=>dd(t).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+
+// theme
 const applyTheme=t=>{if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};
 applyTheme(store.get('nsaTheme',null));
-$('#theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;const t=dark?'light':'dark';store.set('nsaTheme',t);applyTheme(t);});
-const L=await fetch('options_live.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
-if(true){ // paused
-  $('#hdate').textContent='Paused on 19 November 2026';
-  $('#headline').textContent='This page is paused';
-  $('#lede').innerHTML='There are no new trades, no nightly updates and no alerts. Do not trade from it. The tests behind it are in options_log.txt and README.md in this repository.';
-  document.querySelectorAll('section').forEach(s=>s.hidden=true);$('#asof').textContent='';return;}
-if(!L||!L.week){$('#headline').textContent='The data did not load';$('#lede').textContent='Reload in a minute; the evening refresh may be running.';return;}
-const W=L.week,lot=W.lot,wing=L.rule.wing;
-$('#asof').innerHTML=`NSE close<br>${dlong(L.asof)}`;
-const H={tomorrow:`Trade <span class="n">tomorrow</span> at 3:15 pm`,waiting:`Next trade: <span class="n">${dd(W.entry).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span>, 3:15 pm`,
-  entered_today:`Trade placed today. <span class="n">Hold</span> until expiry`,open:`Trade open. Close at 3:15 pm on <span class="n">${dd(W.expiry).toLocaleDateString('en-IN',{weekday:'short',day:'numeric'})}</span>`};
-$('#headline').innerHTML=H[W.state]||'This week\'s trade';
-$('#hdate').textContent=`For the ${dday(W.expiry)} expiry. Entry ${dday(W.entry)}, about 3:15 pm`;
-// ---- slip ----
-const near50=x=>Math.round(x/50)*50;
-const strikesAt=U=>({atm:near50(U),call:near50(U*(1+wing)),put:near50(U*(1-wing))});
-function slipFor(){
-  const E=W.entered;
-  if(E&&(W.state==='open'||W.state==='entered_today')){
-    const credit=E.credit,pnl=E.pnl_points;
-    $('#slipnote').textContent=`Placed ${dlong(W.entry)} at closing prices`;
-    return `<div class="head"><b>Open: NIFTY was ${inr(E.spot)} at entry</b><span>Expiry ${dlong(W.expiry)}. Lot ${lot}</span></div>`+
-      E.legs.map(l=>`<div class="leg"><span class="act ${l.action.toLowerCase()}">${l.action}</span><div class="k">${inr(l.k)} ${l.typ}<small>${l.action==='Sell'?'at the money':l.typ==='CE'?'protection above':'protection below'}</small></div><div class="px">entry ${inr(l.price,2)}<b>${l.now!=null?inr(l.now,2):'–'}</b>now</div></div>`).join('')+
-      `<div class="sum"><div><small>Credit received</small><b>${rs(credit*lot)}</b></div><div><small>Profit or loss so far</small><b class="${cls(pnl)}">${pnl==null?'–':rs(pnl*lot)}</b></div><div><small>Most it can lose</small><b class="down">${rs(-(E.width-credit)*lot)}</b></div></div>`;
-  }
-  $('#slipnote').textContent=`Strikes at today's NIFTY close ${inr(W.spot)}; prices are today's closing prices`;
-  const s=W.strikes,byK={};W.legs.forEach(l=>byK[l.action+l.typ+l.k]=l.price);
-  const legs=[['Buy','CE',s.call_wing,'protection above'],['Buy','PE',s.put_wing,'protection below'],['Sell','CE',s.atm,'at the money'],['Sell','PE',s.atm,'at the money']];
-  return `<div class="head"><b id="slipU">NIFTY ${inr(W.spot)}</b><span>Expiry ${dlong(W.expiry)}. Lot ${lot}. Buy the protection first</span></div>`+
-    legs.map(([a,t,k,why],i)=>`<div class="leg"><span class="act ${a.toLowerCase()}">${a}</span><div class="k" data-leg="${i}">${inr(k)} ${t}<small>${why}</small></div><div class="px" data-px="${i}">today<b>${byK[a+t+k]!=null?inr(byK[a+t+k],2):'–'}</b></div></div>`).join('')+
-    `<div class="sum"><div><small>Credit at today's prices</small><b>${W.credit?rs(W.credit*lot):'–'}</b></div><div><small>Most it can make</small><b class="up">${rs(W.max_profit)}</b></div><div><small>Most it can lose</small><b class="down">${rs(-W.max_loss)}</b></div></div>`+
-    `<div class="calc"><label>NIFTY at 3:15 pm on entry day<input type="number" id="nifty" step="0.05" inputmode="decimal" placeholder="${W.spot.toFixed(2)}"></label><p id="calcnote">Type NIFTY's level at 3:15 pm and the strikes update. Prices update only in Kite.</p></div>`;
+$('#theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;const t=dark?'light':'dark';applyTheme(t);store.set('nsaTheme',t);});
+
+let D,ST;
+try{[D,ST]=await Promise.all(['data.json','static.json'].map(u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json();})));}
+catch(e){$('#picks').innerHTML='<li class="empty">The data did not load. Reload the page in a minute; the nightly refresh may be updating it.</li>';return;}
+
+const AUTO=await fetch('auto.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
+const S=D.stocks, BT=Object.assign({},ST.bt,D.bt), EV=D.ev||{}, MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const TM=(D.tmon||12)-1, TMN=MONL[TM];
+const MI={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const dnum=t=>{const m=String(t||'').trim().match(/^(\d{1,2})?\s*([A-Za-z]{3})[a-z]*\s+(\d{4})$/);return m?(+m[3])*10000+MI[m[2].toLowerCase()]*100+(+(m[1]||1)):0;};
+const dday=t=>{const n=dnum(t);return n?Date.UTC(Math.floor(n/10000),Math.floor(n/100)%100,n%100)/864e5:0;};
+const NEWS=Object.assign({},ST.news||{});for(const [k,v] of Object.entries(AUTO.news||{})){const m=NEWS[k];
+  const seen=v.fetched&&isFinite(Date.parse(v.fetched))?Date.parse(v.fetched)/864e5:dday(v.date);
+  if(m&&!m.auto&&!v.read&&!v.ai&&seen-dday(m.date)<=21)NEWS[k]=Object.assign({},m,{more:v.items||[]});else if(!m||dnum(v.date)>=dnum(m.date)||m.auto)NEWS[k]=v;}
+const BY=Object.fromEntries(S.map(s=>[s.sym,s]));
+
+// ---------- fundamentals score ----------
+const pr=(arr,v,hi)=>{if(v==null||!isFinite(v)||arr.length<5)return null;let n=0;for(const a of arr){if(hi?a<v:a>v)n++;else if(a===v)n+=.5;}return n/arr.length*100;};
+S.forEach(s=>{s.f50=ST.fund?.[s.sym]||null;s.news=NEWS[s.sym]||null;
+  const man=(D.sc||{})[s.sym]||(ST.sc||{})[s.sym]||null,au=(AUTO.sc||{})[s.sym]||null;
+  s.scSrc=man?`Screener.in, ${(D.sc||{})[s.sym]?D.scAsof:ST.scAsof}`:'';
+  if(au&&(!man||man.np==null||(au.q&&dnum(au.q)>=dnum(man.q))||(!au.q&&au.src==='Screener.in'))){s.sc=Object.assign({},man||{},au);if(!au.q&&man&&man.q){['q','np','npYoY','sales','salesYoY'].forEach(k=>s.sc[k]=man[k]);}s.scSrc=`${au.src||'Yahoo Finance'}, fetched ${au.fetched||''}`;}else s.sc=man;
+  s.filings=au&&au.filings||null;});
+(function(){
+  const fin=s=>s.sector==='Financial Services';
+  const A=(get,filt=()=>true)=>S.map(s=>filt(s)?get(s):null).filter(v=>v!=null&&isFinite(v));
+  const g50={roe:s=>s.f50?.roe,profit5:s=>s.f50?.profit5,sales5:s=>s.f50?.sales5,pe:s=>s.f50?.pe>0?s.f50.pe:null,evebitda:s=>!fin(s)&&s.f50?.evebitda>0?s.f50.evebitda:null,pb:s=>s.f50?.pb>0?s.f50.pb:null};
+  const w50={roe:[30,1],profit5:[20,1],sales5:[15,1],pe:[15,0],evebitda:[12,0],pb:[8,0]};
+  const gsc={roe:s=>s.sc?.roe,roce:s=>s.sc?.roce,pg:s=>s.sc&&s.sc.np!=null&&s.sc.npYoY>0?(s.sc.np/s.sc.npYoY-1)*100:null,sg:s=>s.sc&&s.sc.sales!=null&&s.sc.salesYoY>0?(s.sc.sales/s.sc.salesYoY-1)*100:null,de:s=>fin(s)?null:s.sc?.de,pe:s=>s.sc?.pe>0?s.sc.pe:null};
+  const wsc={roe:[20,1],roce:[15,1],pg:[25,1],sg:[15,1],de:[10,0],pe:[15,0]};
+  const arr50={},arrsc={};for(const k in g50)arr50[k]=A(g50[k]);for(const k in gsc)arrsc[k]=A(gsc[k]);
+  const comb=(s,G,W,AR)=>{let sum=0,w=0,n=0;for(const k in G){const v=G[k](s),p=pr(AR[k],v,W[k][1]);if(p==null)continue;sum+=p*W[k][0];w+=W[k][0];n++;}return n>=3?sum/w:null;};
+  S.forEach(s=>{const a=s.f50?comb(s,g50,w50,arr50):null;let b=s.sc?comb(s,gsc,wsc,arrsc):null;
+    if(b!=null&&s.sc){if(s.sc.pledge>10)b-=15;if(s.sc.pe==null&&s.sc.roe<0)b-=20;b=Math.max(0,b);}
+    const v=[a,b].filter(x=>x!=null);s.fFund=v.length?v.reduce((x,y)=>x+y,0)/v.length:null;
+    s.fNews=s.news?({Positive:85,Neutral:55,Mixed:45,Negative:12}[s.news.tone]??null):null;
+    s.fTrend=s.tscore;});
+})();
+
+// ---------- styles & scoring ----------
+const F=[{k:'mom',f:'fMom',name:'Momentum',c:'var(--f1)'},{k:'trend',f:'fTrend',name:'Trend',c:'var(--f2)'},{k:'fund',f:'fFund',name:'Company results',c:'var(--f3)'},{k:'seas',f:'fSeas',name:'Seasonality',c:'var(--f4)'},{k:'news',f:'fNews',name:'News',c:'var(--f5)'},{k:'swing',f:'fSwing',name:'Swing setup',c:'var(--f6)'}];
+const STY={
+  balanced:{name:'Balanced',desc:'A mix of everything, weighted by what has worked',w:{mom:35,trend:20,fund:15,seas:15,news:10,swing:5}},
+  momentum:{name:'Momentum',desc:'The tested model: buy strength, review monthly',w:{mom:60,trend:25,fund:5,seas:5,news:5,swing:0}},
+  swing:{name:'Swing trade',desc:'Short trades of 2–6 weeks on chart setups',w:{mom:20,trend:25,fund:0,seas:15,news:10,swing:30}},
+  longterm:{name:'Long-term',desc:'Profitable, growing companies in an uptrend',w:{mom:25,trend:20,fund:40,seas:5,news:10,swing:0}}};
+let st={style:store.get('nsaStyle','balanced'),uni:'liq',sector:'',q:'',sort:'score',dir:-1,lim:10,tlim:50,custom:null};
+if(!STY[st.style])st.style='balanced';
+let WATCH=new Set(store.get('nsaWatch',[]));
+const W=()=>st.custom||STY[st.style].w;
+function score(s){const w=W();let sum=0,tw=0;const parts={};for(const f of F){const wt=w[f.k]||0;if(!wt)continue;const v=s[f.f];const val=v==null||!isFinite(v)?50:v;parts[f.k]={v:val,missing:v==null,w:wt};sum+=val*wt;tw+=wt;}
+  s.score=tw?sum/tw:0;s.parts=parts;s.tw=tw;return s.score;}
+const verdict=s=>s.close<s.s200?['Avoid for now','avoid']:s.score>=75?['Strong pick','strong']:s.score>=63?['Good pick','good']:s.score>=50?['Watch','watch']:['Avoid','avoid'];
+
+// ---------- reasons ----------
+function seasLine(s){const z=s.seas;if(!z||z.n[TM]<3||z.avg[TM]==null)return null;return {avg:z.avg[TM],up:z.up[TM],n:z.n[TM]};}
+function pros(s){const r=[];
+  if(s.mrank&&s.mrank<=30)r.push(`In the tested Momentum 30 portfolio (rank ${s.mrank} of ${BT.nrank})`);
+  else if(s.fMom>=90)r.push(`Top 10% of all stocks for 12-month momentum`);
+  else if(s.fMom>=75)r.push(`Strong 12-month momentum (better than ${Math.round(s.fMom)}% of stocks)`);
+  if(s.close>s.s50&&s.s50>s.s200&&s.s200up)r.push('Clean uptrend: above its 50-day and 200-day averages, both rising');
+  else if(s.close>s.s200&&s.s200up)r.push('Above its rising 200-day average');
+  if(s.offHigh!=null&&s.offHigh>-5)r.push(`Within ${Math.abs(s.offHigh).toFixed(1)}% of its 52-week high`);
+  const sc=s.sc;if(sc&&sc.np!=null&&sc.npYoY>0&&sc.np>sc.npYoY*1.2)r.push(`Latest quarterly profit up ${Math.round((sc.np/sc.npYoY-1)*100)}% on a year ago`);
+  if(sc&&sc.roe>=20)r.push(`High return on equity: ${sc.roe}%`);else if(s.f50&&s.f50.roe>=20)r.push(`High return on equity: ${s.f50.roe.toFixed(1)}%`);
+  const z=seasLine(s);if(z&&z.avg>0&&s.fSeas>=65)r.push(`${TMN} has been good for it: up in ${z.up} of ${z.n} years, average ${pct(z.avg)}`);
+  if(s.news&&s.news.tone==='Positive')r.push('Recent news is positive');
+  if(s.setup==='Breakout')r.push('Swing setup: broke to a 50-day high on heavy volume');else if(s.setup==='Tight base')r.push('Swing setup: tight range near its high');else if(s.setup==='Pullback')r.push('Swing setup: pulled back to its 20-day average in an uptrend');
+  return r;}
+function cons(s){const c=[];
+  if(!BT.rising)c.push('Market breadth is falling; the cautious model is in cash');
+  if(s.close<s.s200)c.push('Below its 200-day average: in a downtrend');
+  if(s.rsi>75)c.push(`Overbought short term (RSI ${s.rsi.toFixed(0)}); entries after big runs often pull back`);
+  if(s.vol!=null&&s.vol>60)c.push(`Very volatile: about ${s.vol.toFixed(0)}% a year`);
+  const z=seasLine(s);if(z&&z.avg<0&&s.fSeas!=null&&s.fSeas<=35)c.push(`${TMN} has been weak for it: up in only ${z.up} of ${z.n} years`);
+  if(s.news&&s.news.watch)c.push('From the news: '+s.news.watch.replace(/\.$/,''));else{if(s.news&&s.news.tone==='Mixed')c.push('Recent news is mixed');if(s.news&&s.news.tone==='Negative')c.push('Recent news is negative');}
+  const f=s.sc;if(f){if(f.pe==null||f.roe<0)c.push('Loss-making over the last year');else if(f.pe>80)c.push(`Expensive: P/E ${Math.round(f.pe)}`);
+    if(f.np!=null&&f.npYoY!=null&&f.np<f.npYoY)c.push('Quarterly profit below a year ago');
+    if(f.de!=null&&f.de>1.5&&s.sector!=='Financial Services')c.push(`High debt: ${f.de}× equity`);if(f.pledge>10)c.push(`Promoters have pledged ${f.pledge}% of their shares`);}
+  if(s.deliv!=null&&s.deliv<25)c.push('Low delivery: mostly intraday trading');
+  if(s.to<10)c.push('Thinly traded: under ₹10 crore a day');
+  const d=s.deals||[],sell=d.filter(x=>x.side==='SELL').reduce((a,x)=>a+x.qty,0),buy=d.filter(x=>x.side==='BUY').reduce((a,x)=>a+x.qty,0);if(sell>buy)c.push('Net selling in bulk or block deals on the last day');
+  if((s.adj||[]).some(a=>a.includes('non-standard')))c.push('Price history adjusted by estimate');
+  return c;}
+const firstCon=s=>cons(s).filter(x=>!x.startsWith('Market breadth'))[0];
+
+// ---------- header, mood ----------
+const built=new Date(D.built);
+$('#asof').innerHTML=`<span>Prices from NSE close, </span>${esc(D.asof)}<br><span class="muted">Updated ${built.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</span>`;
+$('#newsAsof').textContent=AUTO.asof||ST.newsAsof||ST.fundAsof||'';
+(function(){const b=BT,a=b.breadth,v=b.bavg,Wd=150,H=46,all=a.concat(v.filter(x=>x!=null)),lo=Math.min(...all)-1,hi=Math.max(...all)+1;
+  const X=i=>2+i*(Wd-8)/(a.length-1),Y=x=>3+(hi-x)*(H-6)/(hi-lo),P=arr=>arr.map((x,i)=>x==null?'':(i&&arr[i-1]!=null?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('');
+  const calm=b.rising;
+  $('#mood').innerHTML=`<span class="tag ${calm?'calm':'care'}">${calm?'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l6-6 4 4 6-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Market mood: healthy':'<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="currentColor"/></svg>Market mood: cautious'}</span>
+   <svg class="bsp" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Share of stocks above their 200-day average over the last ${a.length} days, against its 50-day average"><path d="${P(v)}" fill="none" stroke="var(--f2)" stroke-width="2"/><path d="${P(a)}" fill="none" stroke="var(--f1)" stroke-width="2"/><circle cx="${X(a.length-1)}" cy="${Y(a[a.length-1])}" r="3.5" fill="var(--f1)" stroke="var(--surface)" stroke-width="2"/></svg>
+   <p>${b.bnow}% of stocks are above their 200-day average, and that share is ${calm?'rising':'falling'}. ${calm?'The tested model is fully invested in conditions like this.':'In the backtest, stepping aside at times like this cut the worst loss from about 30% to 10%. If you buy, use smaller amounts and a stop-loss.'}</p>
+   <div class="lg"><span><i style="background:var(--f1)"></i>Stocks above 200-day average</span><span><i style="background:var(--f2)"></i>Its 50-day average</span></div>`;})();
+
+// ---------- controls ----------
+$('#styles').innerHTML=Object.entries(STY).map(([k,v])=>`<button type="button" class="style" data-s="${k}"><b>${v.name}</b><span>${v.desc}</span></button>`).join('');
+$('#legend').innerHTML=F.map(f=>`<span><i class="sw" style="background:${f.c}"></i>${f.name}</span>`).join('')+'<span class="muted">Bar length = score out of 100</span>';
+[...new Set(S.map(s=>s.sector))].sort().forEach(x=>{const o=document.createElement('option');o.value=o.textContent=x;$('#sector').appendChild(o);});
+function drawWeights(){const w=W();$('#weights').innerHTML=F.map(f=>`<label><b><i class="sw" style="background:${f.c}"></i>${f.name} <span class="muted" style="margin-left:auto;font-weight:500" id="wv-${f.k}">${w[f.k]||0}</span></b><input type="range" min="0" max="60" step="5" value="${w[f.k]||0}" data-k="${f.k}" aria-label="${f.name} weight"></label>`).join('')+`<p class="muted" style="font-size:12.5px;align-self:end">Changing a slider switches to a custom mix. Pick a style above to reset.</p>`;}
+$('#weights').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;st.custom=Object.assign({},W(),{[k]:+e.target.value});$('#wv-'+k).textContent=e.target.value;renderAll();});
+$('#wtoggle').addEventListener('click',()=>{const o=$('#weights').classList.toggle('open');$('#wtoggle').setAttribute('aria-expanded',o);if(o)drawWeights();});
+$('#styles').addEventListener('click',e=>{const b=e.target.closest('.style');if(!b)return;st.style=b.dataset.s;st.custom=null;store.set('nsaStyle',st.style);if($('#weights').classList.contains('open'))drawWeights();renderAll();});
+$('#uni').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.uni=b.dataset.u;st.lim=10;renderAll();});
+$('#sector').addEventListener('change',e=>{st.sector=e.target.value;st.lim=10;renderAll();});
+$('#q').addEventListener('input',e=>{st.q=e.target.value;st.tlim=50;renderTable();});
+
+// ---------- small charts ----------
+function spark(px,w=120,h=30){const v=px.filter(x=>x!=null);if(v.length<2)return'';const lo=Math.min(...v),hi=Math.max(...v),n=px.length;const X=i=>1+i*(w-2)/(n-1),Y=x=>2+(hi-x)*(h-4)/((hi-lo)||1);
+  const d=px.map((x,i)=>x==null?'':(i&&px[i-1]!=null?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('');const up=v[v.length-1]>=v[0];
+  return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${up?'var(--gain)':'var(--loss)'}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;}
+function strip(s){const tw=s.tw||1;return `<div class="strip" role="img" aria-label="Score ${Math.round(s.score)} of 100: ${F.filter(f=>s.parts[f.k]).map(f=>f.name+' '+Math.round(s.parts[f.k].v)).join(', ')}">${F.filter(f=>s.parts[f.k]).map(f=>{const p=s.parts[f.k];const w=p.v*p.w/tw;return w>0.3?`<i style="width:${w}%;background:${f.c}${p.missing?';opacity:.35':''}" title="${f.name}: ${Math.round(p.v)}${p.missing?' (no data, counted as neutral)':''}"></i>`:'';}).join('')}</div>`;}
+
+// ---------- picks ----------
+function pool(){return S.filter(s=>(st.uni==='all'||(st.uni==='liq'&&s.liq300)||(st.uni==='watch'&&WATCH.has(s.sym)))&&(!st.sector||s.sector===st.sector));}
+function renderPicks(){
+  document.querySelectorAll('.style').forEach(b=>b.setAttribute('aria-pressed',String(!st.custom&&b.dataset.s===st.style)));
+  document.querySelectorAll('#uni button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===st.uni)));
+  const P=pool().filter(s=>st.uni==='watch'||s.close>s.s200).sort((a,b)=>b.score-a.score);
+  $('#headline').textContent=st.uni==='watch'?'Your watchlist, ranked':`Today's ${Math.min(st.lim,P.length)||''} best-scoring NSE stocks`.replace('  ',' ');
+  if(!P.length){$('#picks').innerHTML=`<li class="empty">${st.uni==='watch'?'Your watchlist is empty. Open any stock and choose “Add to watchlist”.':'No stock in this sector is above its 200-day average right now. Try All sectors or All stocks.'}</li>`;return;}
+  $('#picks').innerHTML=P.slice(0,st.lim).map((s,i)=>{const [vl,vc]=verdict(s),p=pros(s).slice(0,2),c=firstCon(s);
+    return `<li class="pick" tabindex="0" data-sym="${esc(s.sym)}" aria-label="${i+1}. ${esc(s.name)}, score ${Math.round(s.score)}">
+      <div class="rk" aria-hidden="true">${i+1}</div>
+      <div><div class="nm">${esc(s.name.replace(/ Limited$| Ltd\.?$/i,''))}<small>${esc(s.sym)}, ${esc(s.sector)}</small></div>
+        <p class="why">${esc(p.join('. '))}${c?`. <span class="c">Watch: ${esc(c.charAt(0).toLowerCase()+c.slice(1))}</span>`:''}</p></div>
+      <div class="fs">${strip(s)}<div class="stripcap"><span>${s.setup?esc(s.setup)+' setup':''}</span><span>${s.news?'News: '+esc(s.news.tone.toLowerCase()):''}</span></div></div>
+      <div class="score"><b>${Math.round(s.score)}</b><span class="v-${vc}">${vl}</span></div>
+      <div class="px"><b>₹${inr(s.close)}</b><span class="${cls(s.chg)}">${pct(s.chg)} today</span>${spark(s.px)}</div></li>`;}).join('')+
+    (P.length>st.lim?`<li class="more"><button type="button" class="btn" id="morePicks">Show ${Math.min(15,P.length-st.lim)} more</button></li>`:'');
 }
-$('#slip').innerHTML=slipFor();
-const inp=$('#nifty');
-if(inp)inp.addEventListener('input',()=>{const U=+inp.value;if(!U)return;const s=strikesAt(U),ks=[[s.call,'CE','protection above'],[s.put,'PE','protection below'],[s.atm,'CE','at the money'],[s.atm,'PE','at the money']];
-  document.querySelectorAll('[data-leg]').forEach((el,i)=>el.innerHTML=`${inr(ks[i][0])} ${ks[i][1]}<small>${ks[i][2]}</small>`);
-  document.querySelectorAll('[data-px]').forEach(el=>el.innerHTML='in Kite<b>–</b>');$('#slipU').textContent=`NIFTY ${inr(U,2)}`;
-  $('#calcnote').textContent=`Strikes for NIFTY ${inr(U,2)}: nearest 50 to the level and to 4% above and below it. Check the credit and margin in Kite before placing.`;});
-// ---- tested ----
-const T=L.tested,row=(r,me)=>`<tr${me?' class="me"':''}><td>${esc(r.period)}</td><td class="r"><b class="${cls(r.profit)}">${rs(r.profit)}</b></td><td class="r">${rs(r.worst_week)}</td><td class="r">${rs(r.worst_fall)}</td></tr>`;
-$('#tested').innerHTML=`<h3 style="font-size:16px">Tested on Stockmock's minute data, 1 lot</h3><table style="margin-top:8px"><thead><tr><th>Period</th><th class="r">Profit</th><th class="r">Worst week</th><th class="r">Worst fall</th></tr></thead><tbody>
-  <tr><td colspan="4" style="font-weight:600;border-top:0">This trade, with the 4% protective buys (margin about ₹1.56 lakh)</td></tr>${T.stockmock.map(r=>row(r,1)).join('')}
-  <tr><td colspan="4" style="font-weight:600">The same without protective buys (margin about ₹2.65 lakh), for comparison</td></tr>${T.unhedged.map(r=>row(r,0)).join('')}</tbody></table>
-  <p class="note">About ₹1 lakh profit per lot in each 4-year period, or 16–17% a year on the margin, with 56–60% of weeks profitable. The worst fall is the largest drop from a high point before recovering, so keep well above the margin in the account. A separate test on 15 years of NSE daily data found weekly selling 2 days before expiry held up from 2019; monthly selling and option buying did not.</p>`;
-// ---- live ----
-const R=(L.record||[]).slice().reverse(),tot=R.reduce((a,r)=>a+r.pnl_rupees,0);
-$('#live').innerHTML=`<h3 style="font-size:16px">Live record since ${dlong(L.live_since)}</h3><p class="note" style="margin-top:4px">Every week from launch, worked out at NSE closing prices on the entry day and expiry day, after costs. ${R.length?`${R.length} weeks: ${R.filter(r=>r.pnl_rupees>0).length} profitable, total <b class="${cls(tot)}">${rs(tot)}</b> per lot.`:'The first week appears here after its expiry.'}</p>`+
- (R.length?`<table style="margin-top:8px"><thead><tr><th>Expiry</th><th class="r">NIFTY at entry → expiry</th><th class="r">Strikes</th><th class="r">Result per lot</th></tr></thead><tbody>${R.map(r=>`<tr><td>${dlong(r.expiry)}</td><td class="r">${inr(r.spot_entry)} → ${inr(r.spot_expiry)}</td><td class="r">${inr(r.wings[0])} / ${inr(r.atm)} / ${inr(r.wings[1])}</td><td class="r"><b class="${cls(r.pnl_rupees)}">${rs(r.pnl_rupees)}</b></td></tr>`).join('')}</tbody></table>`:'');
+$('#picks').addEventListener('click',e=>{if(e.target.id==='morePicks'){st.lim+=15;renderPicks();return;}const li=e.target.closest('.pick');if(li)openStock(li.dataset.sym);});
+$('#picks').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('.pick');if(li){e.preventDefault();openStock(li.dataset.sym);}}});
+
+// ---------- table ----------
+const COLS=[['name','Stock','l'],['score','Score',''],['verdict','Verdict','l'],['fMom','Momentum',''],['fTrend','Trend',''],['fFund','Results',''],['fSeas','Season',''],['news','News','l'],['setup','Setup','l'],['close','Price ₹',''],['chg','Today',''],['r6m','6 months','']];
+function renderTable(){
+  const q=st.q.trim().toLowerCase();
+  let r=pool().filter(s=>!q||s.sym.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
+  const key=s=>st.sort==='name'?s.name:st.sort==='verdict'?s.score-(s.close<s.s200?100:0):st.sort==='news'?(s.fNews??-1):st.sort==='setup'?(s.setup||''):s[st.sort];
+  r.sort((a,b)=>{const x=key(a),y=key(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return typeof x==='string'?st.dir*x.localeCompare(y):st.dir*(x-y);});
+  $('#tbl thead').innerHTML='<tr>'+COLS.map(c=>`<th scope="col" class="${c[2]} ${st.sort===c[0]?'on':''}" data-k="${c[0]}" aria-sort="${st.sort===c[0]?(st.dir<0?'descending':'ascending'):'none'}">${c[1]}${st.sort===c[0]?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr>';
+  const bar=(v,c)=>v==null?'<span class="muted">–</span>':`${Math.round(v)}<span class="mini"><i style="width:${v}%;background:${c}"></i></span>`;
+  $('#tbl tbody').innerHTML=r.slice(0,st.tlim).map(s=>{const [vl,vc]=verdict(s);return `<tr data-sym="${esc(s.sym)}" tabindex="0">
+    <td class="l"><span class="s">${esc(s.sym)}</span><span class="n2">${esc(s.name)}</span></td><td><b>${Math.round(s.score)}</b></td><td class="l"><span class="v-${vc}" style="font-weight:600;font-size:13px">${vl}</span></td>
+    <td>${bar(s.fMom,'var(--f1)')}</td><td>${bar(s.fTrend,'var(--f2)')}</td><td>${bar(s.fFund,'var(--f3)')}</td><td>${bar(s.fSeas,'var(--f4)')}</td>
+    <td class="l">${s.news?`<span class="pill ${s.news.tone==='Positive'?'pos':s.news.tone==='Mixed'?'mix':s.news.tone==='Negative'?'neg':''}">${esc(s.news.tone)}</span>`:'<span class="muted">–</span>'}</td>
+    <td class="l">${s.setup?esc(s.setup):'<span class="muted">–</span>'}</td><td>${inr(s.close)}</td><td class="${cls(s.chg)}">${pct(s.chg)}</td><td class="${cls(s.r6m)}">${pct(s.r6m,0)}</td></tr>`;}).join('')||`<tr><td colspan="${COLS.length}" class="l" style="padding:24px">No stock matches “${esc(st.q)}”. Check the spelling or switch to All stocks.</td></tr>`;
+  $('#tmore').hidden=r.length<=st.tlim;$('#cnt').textContent=`${r.length.toLocaleString('en-IN')} ${r.length===1?'stock':'stocks'}`;
+  $('#allnote').textContent=st.uni==='liq'?'Showing the 300 most-traded stocks. Switch to All stocks above to see every stock the agent covers.':'Sorted by score. Click a column to sort; click a row for details.';
+}
+$('#tbl thead').addEventListener('click',e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;if(st.sort===k)st.dir*=-1;else{st.sort=k;st.dir=(k==='name'||k==='setup')?1:-1;}renderTable();});
+$('#tbl tbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-sym]');if(tr)openStock(tr.dataset.sym);});
+$('#tbl tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr[data-sym]');if(tr)openStock(tr.dataset.sym);}});
+$('#tmoreBtn').addEventListener('click',()=>{st.tlim+=50;renderTable();});
+
+function renderAll(){S.forEach(score);renderPicks();renderTable();}
+
+// ---------- drawer ----------
+const dlg=$('#drawer');
+function priceChart(s){
+  const Wd=640,H=250,m={l:6,r:78,t:10,b:22},px=s.px,n=px.length,DT=D.dates;
+  const sp=a=>a.map((v,j)=>[n-1-5*(a.length-1-j),v]).filter(p=>p[1]!=null&&p[0]>=0);const m50=sp(s.p50||[]),m200=sp(s.p200||[]);
+  const risk=s.close-s.stop,lv=[['Target',s.close+2*risk],['Entry',s.close],['Stop',s.stop]];
+  const all=px.filter(x=>x!=null).concat(m50.map(p=>p[1]),m200.map(p=>p[1]),lv.map(x=>x[1]));let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*.06;lo-=pad;hi+=pad;
+  const X=i=>m.l+i*(Wd-m.l-m.r)/(n-1),Y=v=>m.t+(hi-v)*(H-m.t-m.b)/(hi-lo);
+  const path=a=>{let d='',pen=false;a.forEach((v,i)=>{if(v==null){pen=false;return;}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pen=true;});return d;};
+  const pathS=a=>a.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join('');
+  let g='';for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;g+=`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>`;}
+  let xt='',last='';DT.forEach((d,i)=>{const mo=d.slice(0,7);if(mo!==last&&i>4&&i<n-6)xt+=`<text x="${X(i)}" y="${H-6}" text-anchor="middle">${MON[+d.slice(5,7)-1]}</text>`;last=mo;});
+  const ls=lv.map(([t,v])=>({t,v,y:Y(v)})).sort((a,b)=>a.y-b.y);for(let i=1;i<ls.length;i++)if(ls[i].y-ls[i-1].y<13)ls[i].y=ls[i-1].y+13;
+  const lines=ls.map(o=>`<line x1="${m.l}" x2="${Wd-m.r}" y1="${Y(o.v)}" y2="${Y(o.v)}" stroke="var(--ink2)" stroke-width="1" stroke-dasharray="${o.t==='Entry'?'6 3':'2 3'}" opacity=".7"/><text x="${Wd-m.r+6}" y="${o.y+4}" style="fill:var(--ink2)">${o.t} ${Math.round(o.v).toLocaleString('en-IN')}</text>`).join('');
+  const at=(a,i)=>{for(let j=1;j<a.length;j++)if(a[j][0]>=i){const [x0,y0]=a[j-1],[x1,y1]=a[j];return y0+(y1-y0)*(i-x0)/(x1-x0);}return null;};
+  const html=`<div class="lg" style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:6px"><span><i style="background:var(--f1)"></i>Price</span><span><i style="background:var(--f2)"></i>50-day average</span><span><i style="background:var(--f3)"></i>200-day average</span><span class="muted">Dashed: entry, 2× ATR stop, 2:1 target</span></div>
+   <div style="position:relative"><svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${esc(s.name)} closing price for the last ${n} trading days with 50 and 200-day averages">${g}${xt}<path d="${pathS(m200)}" fill="none" stroke="var(--f3)" stroke-width="2"/><path d="${pathS(m50)}" fill="none" stroke="var(--f2)" stroke-width="2"/><path d="${path(px)}" fill="none" stroke="var(--f1)" stroke-width="2" stroke-linejoin="round"/>${lines}
+    <circle cx="${X(n-1)}" cy="${Y(px[n-1])}" r="4" fill="var(--f1)" stroke="var(--surface)" stroke-width="2"/><line id="cx" y1="${m.t}" y2="${H-m.b}" stroke="var(--line2)" visibility="hidden"/><circle id="cd" r="4" fill="var(--f1)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/><rect x="${m.l}" y="0" width="${Wd-m.l-m.r}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" id="ptip"></div></div>`;
+  return {html,bind(root){const svg=root.querySelector('svg'),tip=root.querySelector('#ptip'),cx=root.querySelector('#cx'),cd=root.querySelector('#cd');
+    svg.addEventListener('pointermove',e=>{const r=svg.getBoundingClientRect();let i=Math.round(((e.clientX-r.left)*Wd/r.width-m.l)*(n-1)/(Wd-m.l-m.r));i=Math.max(0,Math.min(n-1,i));if(px[i]==null)return;
+      cx.setAttribute('x1',X(i));cx.setAttribute('x2',X(i));cx.setAttribute('visibility','visible');cd.setAttribute('cx',X(i));cd.setAttribute('cy',Y(px[i]));cd.setAttribute('visibility','visible');
+      const a5=at(m50,i),a2=at(m200,i);tip.innerHTML=`<b>${new Date(DT[i]).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</b><br>Price ₹${inr(px[i])}<br>50-day ${a5==null?'–':'₹'+inr(a5)}<br>200-day ${a2==null?'–':'₹'+inr(a2)}`;
+      tip.style.display='block';let l=(e.clientX-r.left)+14;if(l+170>r.width)l-=190;tip.style.left=l+'px';tip.style.top=Math.max(0,(e.clientY-r.top)-30)+'px';});
+    svg.addEventListener('pointerleave',()=>{tip.style.display='none';cx.setAttribute('visibility','hidden');cd.setAttribute('visibility','hidden');});}};
+}
+function seasChart(s){const z=s.seas;if(!z||!z.n.some(x=>x>0))return {html:'<p class="muted">Not enough history yet.</p>',bind(){}};
+  const Wd=640,H=170,m={l:6,r:6,t:22,b:24},vals=z.avg.map(v=>v??0),mx=Math.max(4,...vals.map(Math.abs));const bw=(Wd-m.l-m.r)/12,Y=v=>m.t+(mx-v)*(H-m.t-m.b)/(2*mx),y0=Y(0);
+  let bars='';z.avg.forEach((v,i)=>{if(v==null)return;const x=m.l+i*bw+bw*.18,w=bw*.64,y=v>=0?Y(v):y0,h=Math.max(1,Math.abs(Y(v)-y0));const hl=i===TM;
+    bars+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${v>=0?'var(--pos)':'var(--neg)'}" ${hl?'stroke="var(--ink)" stroke-width="2"':'opacity=".75"'}/>`;
+    if(hl)bars+=`<text x="${x+w/2}" y="${v>=0?y-6:y+h+13}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${pct(v)}</text>`;});
+  const xt=MON.map((t,i)=>`<text x="${m.l+i*bw+bw/2}" y="${H-6}" text-anchor="middle" style="${i===TM?'fill:var(--ink);font-weight:700':''}">${t}</text>`).join('');
+  const hit=MON.map((t,i)=>`<rect x="${m.l+i*bw}" y="0" width="${bw}" height="${H}" fill="transparent" data-i="${i}"/>`).join('');
+  const html=`<div style="position:relative"><svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Average return in each calendar month over the past ${Math.max(...z.n)} years"><line x1="${m.l}" x2="${Wd-m.r}" y1="${y0}" y2="${y0}" stroke="var(--line2)"/>${bars}${xt}${hit}</svg><div class="tip" id="stip"></div></div>
+   <p class="ink2" style="font-size:13.5px;margin-top:6px">${z.n[TM]>=3?`In ${TMN}, ${esc(s.sym)} rose in <b>${z.up[TM]} of ${z.n[TM]}</b> years, by ${pct(z.avg[TM])} on average. Its seasonality score is ${s.fSeas==null?'–':Math.round(s.fSeas)}, compared with other stocks in the same month.`:`Fewer than three ${TMN}s of history, so seasonality counts as neutral.`} Blue bars are average gains, red are losses.</p>`;
+  return {html,bind(root){const svg=root.querySelector('svg'),tip=root.querySelector('#stip');svg.addEventListener('pointermove',e=>{const t=e.target.closest('rect[data-i]');if(!t){tip.style.display='none';return;}const i=+t.dataset.i,r=svg.getBoundingClientRect();
+    tip.innerHTML=z.n[i]?`<b>${MONL[i]}</b><br>Average ${pct(z.avg[i])}<br>Up in ${z.up[i]} of ${z.n[i]} years`:`<b>${MONL[i]}</b><br>No data`;tip.style.display='block';let l=(e.clientX-r.left)+12;if(l+150>r.width)l-=170;tip.style.left=l+'px';tip.style.top='10px';});
+    svg.addEventListener('pointerleave',()=>tip.style.display='none');}};}
+
+function openStock(sym){const s=BY[sym];if(!s)return;score(s);
+  const [vl,vc]=verdict(s),P=pros(s),C=cons(s),risk=s.close-s.stop,tgt=s.close+2*risk,pc=priceChart(s),sc=seasChart(s);
+  const nz=s.news,f=s.sc,f5=s.f50;
+  const summary=vc==='strong'?'Scores well on most of what the agent checks.':vc==='good'?'Solid on the important checks, with some gaps.':vc==='watch'?'Mixed signals. Worth watching, not an obvious buy.':s.close<s.s200?'Its price is in a downtrend, so the agent does not rank it.':'Scores poorly on what has mattered most.';
+  const fund=[];
+  if(f){fund.push(['Market cap',`₹${inr(f.mcap,0)} cr`],['P/E',f.pe??'–'],['Return on equity',f.roe!=null?f.roe+'%':'–'],['Return on capital',f.roce!=null?f.roce+'%':'–']);
+    if(f.np!=null)fund.push([`Net profit, ${f.q||'latest quarter'}`,`₹${inr(f.np,0)} cr <span class="muted">vs ₹${inr(f.npYoY,0)} cr</span>`]);
+    if(f.sales!=null)fund.push(['Sales, same quarter',`₹${inr(f.sales,0)} cr <span class="muted">vs ₹${inr(f.salesYoY,0)} cr</span>`]);
+    fund.push(['Debt to equity',f.de??'–']);if(f.prom)fund.push(['Promoter holding',`${f.prom[1]}% <span class="${f.prom[1]>=f.prom[0]?'up':'down'}">${pct(f.prom[1]-f.prom[0],2)}</span>`]);if(f.fii)fund.push(['FII holding',`${f.fii[1]}% <span class="${f.fii[1]>=f.fii[0]?'up':'down'}">${pct(f.fii[1]-f.fii[0],2)}</span>`]);if(f.pledge)fund.push(['Pledged by promoters',f.pledge+'%']);}
+  else if(f5){fund.push(['P/E',inr(f5.pe,1)],['P/B',inr(f5.pb,1)],['Return on equity',inr(f5.roe,1)+'%'],['5-year sales growth',inr(f5.sales5,1)+'%'],['5-year profit growth',inr(f5.profit5,1)+'%']);if(f5.evebitda)fund.push(['EV/EBITDA',inr(f5.evebitda,1)]);}
+  const fsrc=f?esc(s.scSrc):f5?`MoneyWorks4Me, ${esc(ST.fundAsof)}`:'';
+  dlg.innerHTML=`<div class="dhead"><div><h2 id="dname">${esc(s.name)}</h2><p class="meta">${esc(s.sym)}, ${esc(s.sector)}, ${esc(s.idx)}</p><p class="pxl"><b>₹${inr(s.close)}</b> <span class="${cls(s.chg)}">${pct(s.chg)}</span> <span class="muted">at close, ${esc(D.asof)}</span></p></div>
+     <div class="acts"><button type="button" class="btn" id="wbtn">${WATCH.has(s.sym)?'On watchlist ✓':'Add to watchlist'}</button><button type="button" class="iconbtn" id="dclose" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div></div>
+   <div class="dbody">
+    <div class="card verdict"><div class="big v-${vc}">${Math.round(s.score)}</div><div class="vl v-${vc}">${vl}</div><p>${summary} Score out of 100 for the ${st.custom?'custom':STY[st.style].name.toLowerCase()} style.</p></div>
+    <div class="two"><div class="card"><h3>Why it scores well</h3>${P.length?`<ul class="ul pro">${P.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">Nothing stands out.</p>'}</div>
+      <div class="card"><h3>Watch out for</h3>${C.length?`<ul class="ul con">${C.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">None of the caution checks apply.</p>'}</div></div>
+    <div class="card"><h3>What went into the score</h3><div class="fbars">${F.map(fx=>{const p=s.parts[fx.k],v=s[fx.f];return `<div class="fbar"><span>${fx.name}</span><div class="t"><i style="width:${v??0}%;background:${fx.c}"></i></div><b>${v==null?'<span class="muted" title="No data, counted as 50">n/a</span>':Math.round(v)}</b><span class="w">weight ${p?p.w:0}</span></div>`;}).join('')}</div>
+      <p class="muted" style="font-size:12.5px;margin-top:10px">Each factor is 0 to 100, ranked against other stocks. Missing data counts as 50 (neutral).</p></div>
+    <div class="card"><h3>Price, last 6 months</h3>${pc.html}</div>
+    <div class="card"><h3>Seasonality: how ${TMN} has gone</h3>${sc.html}</div>
+    <div class="card"><h3>Latest news</h3>${nz?(nz.read||nz.ai?`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">checked ${esc(nz.fetched||nz.date)}</span></p><p style="font-size:14.5px">${esc(nz.text)}</p>${nz.watch?`<p class="note" style="margin-top:10px">Watch: ${esc(nz.watch)}</p>`:''}
+      ${nz.items&&nz.items.length?`<details style="margin-top:10px"><summary style="font-size:13.5px">Recent headlines (${nz.items.length})</summary><ul class="ul" style="gap:7px;margin-top:8px">${nz.items.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul></details>`:''}
+      <p class="muted" style="font-size:12.5px;margin-top:8px">${nz.read==='ai'?'Summary written each night by Claude, using only the results, exchange announcements and headlines collected for this stock.':'Summary built each night from the company\'s reported results, its own stock-exchange announcements and shareholding changes (via Screener.in). Headlines are listed for reference only.'} Open the sources before acting.</p>`:`<p style="margin-bottom:8px"><span class="pill ${nz.tone==='Positive'?'pos':nz.tone==='Mixed'?'mix':nz.tone==='Negative'?'neg':''}">${esc(nz.tone)}</span> <span class="muted" style="font-size:13px">${esc(nz.date)}</span></p>${nz.items?(nz.items.length?`<ul class="ul" style="gap:9px">${nz.items.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:`<p class="ink2" style="font-size:14px">${esc(nz.text)}</p>`)+'<p class="muted" style="font-size:12.5px;margin-top:8px">Headlines collected automatically. The tone is judged from headline wording, so open the articles before acting.</p>':`<p class="ink2" style="font-size:14.5px">${esc(nz.text)}</p>${nz.url?`<p style="margin-top:8px;font-size:13.5px"><a href="${esc(nz.url)}" target="_blank" rel="noopener">Read it on ${esc(nz.src)}</a></p>`:''}${nz.more&&nz.more.length?`<p class="muted" style="font-size:12.5px;margin:12px 0 6px">Newer headlines, collected automatically</p><ul class="ul" style="gap:7px">${nz.more.slice(0,3).map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a> <span class="muted" style="font-size:12.5px">${esc(x.src)}, ${esc(x.date)}</span></span></li>`).join('')}</ul>`:''}`}`):`<p class="ink2" style="font-size:14px">The agent checks news for the top-ranked stocks only, and this one wasn't checked. Search before you act.</p>`}
+      ${s.filings?`<p class="muted" style="font-size:12.5px;margin:14px 0 6px">Latest stock-exchange announcements</p><ul class="ul" style="gap:7px">${s.filings.map(x=>`<li style="grid-template-columns:1fr"><span><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.t)}</a>${x.d?` <span class="muted" style="font-size:12.5px">${esc(x.d)}</span>`:''}</span></li>`).join('')}</ul>`:''}
+      <p style="margin-top:8px;font-size:13.5px"><a href="https://www.google.com/search?tbm=nws&q=${encodeURIComponent(s.name+' share')}" target="_blank" rel="noopener">Search the latest news</a></p></div>
+    ${fund.length?`<div class="card"><h3>Company numbers</h3><div class="kv">${fund.map(([k,v])=>`<span>${k}</span><b>${v}</b>`).join('')}</div><p class="muted" style="font-size:12.5px;margin-top:8px">Source: ${fsrc}.</p></div>`:''}
+    <div class="card"><h3>Trade plan</h3><div class="kv">
+      <span>Buy near</span><b>₹${inr(s.close)}</b>
+      <span>Stop-loss (2× average daily range below)</span><b>₹${inr(s.stop)} <span class="down">${pct(-s.riskPct)}</span></b>
+      <span>Swing target (twice the risk)</span><b>₹${inr(tgt)} <span class="up">${pct(2*s.riskPct)}</span></b>
+      <span>Momentum style</span><b style="font-weight:500">Hold while in the top 30; review after each month-end</b></div>
+      <div class="calc"><label>Your capital ₹<input type="number" id="cap" min="0" step="10000" value="${store.get('nsaCap',500000)}"></label><label>Risk per trade %<input type="number" id="rk" min="0.25" max="5" step="0.25" value="${store.get('nsaRisk',1)}"></label><label>Stocks you hold<input type="number" id="np" min="1" max="50" step="1" value="${store.get('nsaN',10)}"></label><output id="qty" for="cap rk np"></output></div></div>
+    ${!BT.rising?'<p class="note">Market breadth is falling. The tested model\'s cautious version holds cash until it turns up, so consider a smaller position or waiting.</p>':''}
+    <div class="links"><a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">Live chart on TradingView</a><a href="https://www.screener.in/company/${encodeURIComponent(s.sym)}/" target="_blank" rel="noopener">Financials on Screener.in</a><a href="https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(s.sym)}" target="_blank" rel="noopener">NSE quote</a></div>
+   </div>`;
+  pc.bind(dlg);sc.bind(dlg);
+  const size=()=>{const cap=+$('#cap').value||0,rk=+$('#rk').value||1,np=Math.max(1,+$('#np').value||10);store.set('nsaCap',cap);store.set('nsaRisk',rk);store.set('nsaN',np);
+    const byRisk=risk>0?Math.floor(cap*rk/100/risk):0,byCap=Math.floor(cap/np/s.close),q=Math.max(0,Math.min(byRisk,byCap));
+    $('#qty').innerHTML=q>0?`Buy <b>${q.toLocaleString('en-IN')} shares</b>, about ₹${inr(q*s.close,0)}. If the stop is hit you lose about ₹${inr(q*risk,0)} (${(q*risk/cap*100).toFixed(2)}% of your capital). ${byCap<byRisk?'Capped so no stock is more than 1/'+np+' of your money.':''}`:'Your capital is too small for one share at these settings.';};
+  ['cap','rk','np'].forEach(id=>$('#'+id).addEventListener('input',size));size();
+  $('#dclose').addEventListener('click',()=>dlg.close());
+  $('#wbtn').addEventListener('click',e=>{WATCH.has(s.sym)?WATCH.delete(s.sym):WATCH.add(s.sym);store.set('nsaWatch',[...WATCH]);e.target.textContent=WATCH.has(s.sym)?'On watchlist ✓':'Add to watchlist';if(st.uni==='watch')renderAll();});
+  if(!dlg.open)dlg.showModal();dlg.scrollTop=0;
+}
+dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
+
+// ---------- evidence ----------
+(function(){const sx=EV.setups||[],se=EV.seas||{},m=(BT.main||[])[0]||{},b=(BT.main||[])[2]||{};const best=sx.slice().sort((a,b)=>(b.avg||0)-(a.avg||0));
+  const items=[
+   ['Momentum','var(--f1)','g-strong','Strong evidence',`The Momentum 30 model returned ${m.cagr}% a year from ${new Date(BT.start).getFullYear()} to ${new Date(BT.end).getFullYear()}, against ${b.cagr}% for an equal-weight basket. It also held up in the years it was not tuned on. Over 20 years (2007–2026), holding the monthly top 10 by this score made 24.1% a year against 10.1% for the market, but fell as much as 77% on the way, in 2008.`],
+   ['Trend','var(--f2)','g-some','Supporting',`Price above rising 50 and 200-day averages. Every Momentum 30 stock passes this test; on its own it mainly filters out downtrends.`],
+   ['Seasonality','var(--f4)','g-some','Some evidence',`Each month, stocks with the best history for that calendar month beat those with the worst in ${se.beat} of ${se.months} months: on average ${pct(se.top)} against ${pct(se.bot)} the next month, relative to the market.`],
+   ['Company results','var(--f3)','g-none','Not testable here',`Profit growth, return on equity, debt and valuation, ranked against other stocks. Only past figures for about ${S.filter(s=>s.fFund!=null).length} stocks are on file, so it acts as a quality check, not a tested signal.`],
+   ['News','var(--f5)','g-none','Not testable here',`Each night the agent reads the top-ranked stocks' reported results, their own stock-exchange announcements and shareholding changes, and writes a short summary with the main risk. Headlines count only when there is nothing firmer. It flags problems more than it predicts gains.`],
+   ['Swing setups','var(--f6)','g-weak','Weak evidence',`Over 20 days, ${best.map(x=>`${x.label.toLowerCase()}s beat the market by ${pct(x.avg,2)}`).join(', ')} on average, and won less than half the time. Useful for timing an entry, not for picking stocks.`]];
+  $('#ev').innerHTML=items.map(([t,c,g,gl,p])=>`<div><h3><i class="sw" style="background:${c}"></i>${t}<span class="grade ${g}">${gl}</span></h3><p>${esc(p)}</p></div>`).join('');
+  const pd=x=>new Date(x).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+  $('#btnote').textContent=`Monthly portfolio simulation, ${pd(BT.start)} to ${pd(BT.end)}, on every stock that met the liquidity rule at the time. Log scale.`;
+  const sg=x=>`<span class="${cls(x)}">${pct(x)}</span>`,yrs=[2022,2023,2024,2025,2026];
+  const tb=(id,cap,rows)=>{$(id).innerHTML=`<caption style="text-align:left;font-weight:600;padding:10px 0 4px">${cap}</caption><thead><tr><th>Strategy</th><th>Yearly return</th><th>Worst fall</th>${yrs.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody>`+rows.map(r=>`<tr><td>${esc(r.label)}</td><td><b>${sg(r.cagr)}</b></td><td>${r.dd.toFixed(1)}%</td>${(r.years||[]).map(y=>`<td>${sg(y)}</td>`).join('')}</tr>`).join('')+'</tbody>';};
+  tb('#bt1','The model against plain baskets',BT.main||[]);tb('#bt2','Does it survive changes to the settings?',BT.robust||[]);tb('#bt3','Rules that failed the same test',BT.failed||[]);
+  const c=BT.curves;if(!c)return;const N=c.dates.length,EW=1000,EH=280,mm={l:6,r:70,t:10,b:22},ser=[['m30','var(--f1)','Momentum 30'],['m30g','var(--f2)','In cash while breadth falls'],['b300','var(--f3)','Basket']];
+  const mx=Math.max(...c.m30,...c.m30g,...c.b300),mn=Math.min(...c.m30,...c.m30g,...c.b300),EX=i=>mm.l+i*(EW-mm.l-mm.r)/(N-1),EY=v=>mm.t+(Math.log(mx*1.05)-Math.log(v))*(EH-mm.t-mm.b)/(Math.log(mx*1.05)-Math.log(mn*.95));
+  let g='';[80,100,150,200,300,400].filter(v=>v<mx*1.05&&v>mn*.95).forEach(v=>{g+=`<line x1="${mm.l}" x2="${EW-mm.r}" y1="${EY(v)}" y2="${EY(v)}" stroke="var(--grid)"/><text x="${EW-mm.r+6}" y="${EY(v)+4}">₹${v/10} lakh</text>`;});
+  let xt='',ly='';c.dates.forEach((d,i)=>{const y=d.slice(0,4);if(y!==ly&&i>2)xt+=`<text x="${EX(i)}" y="${EH-6}" text-anchor="middle">${y}</text>`;ly=y;});
+  $('#eqc').innerHTML=`<svg viewBox="0 0 ${EW} ${EH}" role="img" aria-label="Growth of 10 lakh rupees in the Momentum 30, its cautious version and an equal-weight basket">${g}${xt}${ser.map(([k,col])=>`<path d="${c[k].map((v,i)=>(i?'L':'M')+EX(i).toFixed(1)+' '+EY(v).toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/><circle cx="${EX(N-1)}" cy="${EY(c[k][N-1])}" r="4" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`).join('')}<line id="ex" y1="${mm.t}" y2="${EH-mm.b}" stroke="var(--line2)" visibility="hidden"/></svg>`;
+  const es=$('#eqc svg'),et=$('#eqtip'),ex=$('#ex');
+  es.addEventListener('pointermove',e=>{const r=es.getBoundingClientRect(),box=es.parentElement.parentElement.getBoundingClientRect();let i=Math.round(((e.clientX-r.left)*EW/r.width-mm.l)*(N-1)/(EW-mm.l-mm.r));i=Math.max(0,Math.min(N-1,i));ex.setAttribute('x1',EX(i));ex.setAttribute('x2',EX(i));ex.setAttribute('visibility','visible');
+    et.innerHTML=`<b>${new Date(c.dates[i]).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</b><br>Momentum 30: ₹${(c.m30[i]/10).toFixed(2)} lakh<br>Cautious: ₹${(c.m30g[i]/10).toFixed(2)} lakh<br>Basket: ₹${(c.b300[i]/10).toFixed(2)} lakh`;et.style.display='block';let l=e.clientX-box.left+14;if(l+210>box.width)l-=230;et.style.left=l+'px';et.style.top=(e.clientY-box.top-20)+'px';});
+  es.addEventListener('pointerleave',()=>{et.style.display='none';ex.setAttribute('visibility','hidden');});
+})();
+
+renderAll();
 })();
 </script>
 </body>

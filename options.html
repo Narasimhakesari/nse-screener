@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIFTY weekly trade</title>
+<meta name="description" content="One tested NIFTY weekly options trade: sell the at-the-money straddle 2 trading days before expiry with far protective buys, updated every evening from NSE data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --page:#f3f4f7; --surface:#fff; --sunk:#eceef3; --ink:#161b36; --ink2:#4b5270; --muted:#737993; --line:#e2e5ed; --line2:#cdd1dd;
+  --brand:#3441a8; --brand-soft:#e7e9f8; --mari:#f0a500; --mari-soft:#fdf3dc; --mari-ink:#7a5200;
+  --gain:#12804a; --gain-soft:#e2f3e9; --loss:#c33a2f; --loss-soft:#fbe7e4;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif; --body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8e94ad; --line:#272d4a; --line2:#363d60;
+  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-soft:#3a2f12; --mari-ink:#f5c45a; --gain:#3fc67a; --gain-soft:#15301f; --loss:#f07a6e; --loss-soft:#3d1d1c;}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --page:#0f1326; --surface:#171c33; --sunk:#1e2440; --ink:#eceef6; --ink2:#b9bed3; --muted:#8e94ad; --line:#272d4a; --line2:#363d60;
+  --brand:#9aa6ff; --brand-soft:#232a52; --mari:#f5b42a; --mari-soft:#3a2f12; --mari-ink:#f5c45a; --gain:#3fc67a; --gain-soft:#15301f; --loss:#f07a6e; --loss-soft:#3d1d1c;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--page);color:var(--ink);font:16px/1.55 var(--body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--brand)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+.wrap{max-width:780px;margin:0 auto;padding:0 20px 40px}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.015em;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--muted)} .up{color:var(--gain)} .down{color:var(--loss)}
+.top{display:flex;align-items:center;gap:14px;padding:18px 0 6px}
+.mark{font:800 18px/1 var(--display);display:flex;align-items:center;gap:9px}
+.mark svg{width:24px;height:24px}
+.top .asof{margin-left:auto;color:var(--muted);font-size:13px;text-align:right;line-height:1.35}
+.iconbtn{border:1px solid var(--line2);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;flex:none}
+.hero{padding:30px 0 6px}
+.hero .date{font:600 15px var(--body);color:var(--muted)}
+.hero h1{font-size:clamp(38px,7.5vw,60px);line-height:1;font-weight:800;margin-top:4px}
+.hero h1 .n{color:var(--brand)}
+.hero p{margin-top:14px;color:var(--ink2);font-size:17px;max-width:62ch}
+section{margin-top:40px}
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.sh h2{font-size:24px;font-weight:700}
+.sh p{font-size:14px;color:var(--muted)}
+/* the trade slip: the one bold thing */
+.slip{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.slip .head{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;padding:16px 20px;border-bottom:1px solid var(--line)}
+.slip .head b{font:700 20px var(--display)}
+.slip .head span{font-size:14px;color:var(--ink2)}
+.leg{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;padding:13px 20px;border-top:1px solid var(--line)}
+.leg:first-of-type{border-top:0}
+.act{font:700 13px var(--body);text-align:center;border-radius:8px;padding:5px 0}
+.act.buy{background:var(--gain-soft);color:var(--gain)} .act.sell{background:var(--loss-soft);color:var(--loss)}
+.leg .k{font:700 24px/1.1 var(--display)}
+.leg .k small{font:500 13px var(--body);color:var(--muted);margin-left:8px}
+.leg .px{text-align:right;font-size:14px;color:var(--ink2)}
+.leg .px b{display:block;font:700 17px var(--display);color:var(--ink)}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.sum div{padding:12px 20px;border-left:1px solid var(--line)}
+.sum div:first-child{border-left:0}
+.sum small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.sum b{font:700 20px/1.25 var(--display)}
+.calc{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:end;padding:14px 20px;background:var(--sunk)}
+.calc label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted);font-weight:600}
+.calc input{width:170px;padding:8px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--surface)}
+.calc p{font-size:13.5px;color:var(--ink2);flex:1;min-width:220px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+ol.steps{margin:0;padding-left:20px;color:var(--ink2);font-size:15px}
+ol.steps li{margin:0 0 10px;padding-left:4px}
+ol.steps b{color:var(--ink)}
+ul.risks{margin:0;padding-left:20px;color:var(--ink2);font-size:15px}
+ul.risks li{margin:0 0 8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;border-top:0;font-size:13px}
+td.r,th.r{text-align:right}
+tr.me td{background:var(--gain-soft)}
+.note{font-size:13.5px;color:var(--ink2);margin-top:12px}
+.foot{margin-top:44px;font-size:13px;color:var(--muted);display:grid;gap:8px}
+.foot b{color:var(--ink2)}
+@media (max-width:600px){
+  .sum{grid-template-columns:1fr}
+  .sum div{border-left:0;border-top:1px solid var(--line)}
+  .sum div:first-child{border-top:0}
+  .sh{flex-direction:column;gap:2px}
+  .leg .k{font-size:21px}
+  table{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mark"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--ink)"/><path d="M4 17c3 0 4-8 9-8s6 8 9 8" fill="none" stroke="var(--mari)" stroke-width="2.6" stroke-linecap="round"/></svg>NIFTY weekly trade</div>
+    <div class="asof" id="asof"></div>
+    <button class="iconbtn" id="theme" type="button" aria-label="Switch light or dark theme"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor"/></svg></button>
+  </header>
+
+  <div class="hero">
+    <p class="date" id="hdate"></p>
+    <h1 id="headline">Loading this week's trade</h1>
+    <p id="lede">One trade a week on NIFTY. On the second trading day before each weekly expiry, at about 3:15 pm, <b>sell the at-the-money call and put</b> and <b>buy a call about 4% above and a put about 4% below</b> as protection. Hold until 3:15 pm on expiry day, then close all four. The protective buys cap the most you can lose in one week.</p>
+  </div>
+
+  <section aria-labelledby="h-slip">
+    <div class="sh"><h2 id="h-slip">The four legs</h2><p id="slipnote"></p></div>
+    <div class="slip" id="slip"></div>
+  </section>
+
+  <section aria-labelledby="h-how">
+    <div class="sh"><h2 id="h-how">How to place it in Zerodha Kite</h2></div>
+    <div class="card"><ol class="steps">
+      <li><b>On the entry day, at about 3:15 pm,</b> note NIFTY's level and type it into the box above. It gives the four strikes for the coming weekly expiry.</li>
+      <li><b>Buy the two protective legs first</b> (the far call and the far put), then sell the at-the-money call and put. Buying first gets you the lower, hedged margin. A Kite basket order can place all four together.</li>
+      <li><b>Leave it alone until 3:15 pm on expiry day</b>, then close all four legs. Do not add a stop-loss: the test had none, and the protective legs already cap the loss.</li>
+      <li><b>Use 1 lot per ₹2.5 lakh or so</b> in the account. The margin is about ₹1.5 lakh per lot, and a bad run in the test took about ₹90,000 off a lot before recovering.</li>
+      <li><b>If an NSE holiday falls in the week,</b> the entry day moves one trading day earlier. This page counts weekdays only, so check the exchange holiday list in holiday weeks.</li>
+    </ol></div>
+  </section>
+
+  <section aria-labelledby="h-test">
+    <div class="sh"><h2 id="h-test">How it did</h2><p>1 lot, after costs, before tax</p></div>
+    <div class="card" style="overflow-x:auto" id="tested"></div>
+    <div class="card" style="overflow-x:auto;margin-top:12px" id="live"></div>
+  </section>
+
+  <section aria-labelledby="h-risk">
+    <div class="sh"><h2 id="h-risk">Before you trade it</h2></div>
+    <div class="card"><ul class="risks">
+      <li><b>About 4 weeks in 10 lose money.</b> The worst single week in the test lost about ₹37,000 per lot, and losing runs lasted months.</li>
+      <li><b>The protective buys cost about half the profit</b> in the test, because NIFTY rarely moved 4% in two days. They are insurance against a crash bigger than anything from 2019 to 2026; without them that loss would be unlimited.</li>
+      <li><b>The test covers 2019–2026 only</b>, about 400 weekly trades. Weekly expiry days, lot sizes and margin rules have changed several times, and may change again.</li>
+      <li><b>Prices here are NSE closing prices</b>, which differ a little from 3:15 pm prices, and far strikes can be thin, so your fills may be worse.</li>
+      <li><b>Tax:</b> F&amp;O profits are business income, taxed at your slab rate. SEBI found about 9 in 10 individual F&amp;O traders lose money.</li>
+    </ul></div>
+  </section>
+
+  <footer class="foot">
+    <p><b>Not investment advice.</b> A rules-based example from public NSE data, for education. Not a recommendation and not research by a SEBI-registered analyst. Options can lose more than you expect.</p>
+    <p><b>Data.</b> NSE's daily F&amp;O file, read each weekday evening after about 8:30 pm IST. Tested on 15 years of NSE daily files and on Stockmock's minute data. <a href="index.html">NSE stock scores</a>.</p>
+  </footer>
+</div>
+<script>
+(async function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=(x,d=0)=>x==null||!isFinite(x)?'–':x.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
+const rs=x=>x==null?'–':(x<0?'−':'')+'₹'+inr(Math.abs(x));
+const cls=x=>x>0?'up':x<0?'down':'';
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const dd=t=>new Date(t+'T00:00:00');
+const dlong=t=>dd(t).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+const dday=t=>dd(t).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+const applyTheme=t=>{if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;};
+applyTheme(store.get('nsaTheme',null));
+$('#theme').addEventListener('click',()=>{const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;const t=dark?'light':'dark';store.set('nsaTheme',t);applyTheme(t);});
+const L=await fetch('options_live.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+if(true){ // paused
+  $('#hdate').textContent='Paused on 19 November 2026';
+  $('#headline').textContent='This page is paused';
+  $('#lede').innerHTML='There are no new trades, no nightly updates and no alerts. Do not trade from it. The tests behind it are in options_log.txt and README.md in this repository.';
+  document.querySelectorAll('section').forEach(s=>s.hidden=true);$('#asof').textContent='';return;}
+if(!L||!L.week){$('#headline').textContent='The data did not load';$('#lede').textContent='Reload in a minute; the evening refresh may be running.';return;}
+const W=L.week,lot=W.lot,wing=L.rule.wing;
+$('#asof').innerHTML=`NSE close<br>${dlong(L.asof)}`;
+const H={tomorrow:`Trade <span class="n">tomorrow</span> at 3:15 pm`,waiting:`Next trade: <span class="n">${dd(W.entry).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span>, 3:15 pm`,
+  entered_today:`Trade placed today. <span class="n">Hold</span> until expiry`,open:`Trade open. Close at 3:15 pm on <span class="n">${dd(W.expiry).toLocaleDateString('en-IN',{weekday:'short',day:'numeric'})}</span>`};
+$('#headline').innerHTML=H[W.state]||'This week\'s trade';
+$('#hdate').textContent=`For the ${dday(W.expiry)} expiry. Entry ${dday(W.entry)}, about 3:15 pm`;
+// ---- slip ----
+const near50=x=>Math.round(x/50)*50;
+const strikesAt=U=>({atm:near50(U),call:near50(U*(1+wing)),put:near50(U*(1-wing))});
+function slipFor(){
+  const E=W.entered;
+  if(E&&(W.state==='open'||W.state==='entered_today')){
+    const credit=E.credit,pnl=E.pnl_points;
+    $('#slipnote').textContent=`Placed ${dlong(W.entry)} at closing prices`;
+    return `<div class="head"><b>Open: NIFTY was ${inr(E.spot)} at entry</b><span>Expiry ${dlong(W.expiry)}. Lot ${lot}</span></div>`+
+      E.legs.map(l=>`<div class="leg"><span class="act ${l.action.toLowerCase()}">${l.action}</span><div class="k">${inr(l.k)} ${l.typ}<small>${l.action==='Sell'?'at the money':l.typ==='CE'?'protection above':'protection below'}</small></div><div class="px">entry ${inr(l.price,2)}<b>${l.now!=null?inr(l.now,2):'–'}</b>now</div></div>`).join('')+
+      `<div class="sum"><div><small>Credit received</small><b>${rs(credit*lot)}</b></div><div><small>Profit or loss so far</small><b class="${cls(pnl)}">${pnl==null?'–':rs(pnl*lot)}</b></div><div><small>Most it can lose</small><b class="down">${rs(-(E.width-credit)*lot)}</b></div></div>`;
+  }
+  $('#slipnote').textContent=`Strikes at today's NIFTY close ${inr(W.spot)}; prices are today's closing prices`;
+  const s=W.strikes,byK={};W.legs.forEach(l=>byK[l.action+l.typ+l.k]=l.price);
+  const legs=[['Buy','CE',s.call_wing,'protection above'],['Buy','PE',s.put_wing,'protection below'],['Sell','CE',s.atm,'at the money'],['Sell','PE',s.atm,'at the money']];
+  return `<div class="head"><b id="slipU">NIFTY ${inr(W.spot)}</b><span>Expiry ${dlong(W.expiry)}. Lot ${lot}. Buy the protection first</span></div>`+
+    legs.map(([a,t,k,why],i)=>`<div class="leg"><span class="act ${a.toLowerCase()}">${a}</span><div class="k" data-leg="${i}">${inr(k)} ${t}<small>${why}</small></div><div class="px" data-px="${i}">today<b>${byK[a+t+k]!=null?inr(byK[a+t+k],2):'–'}</b></div></div>`).join('')+
+    `<div class="sum"><div><small>Credit at today's prices</small><b>${W.credit?rs(W.credit*lot):'–'}</b></div><div><small>Most it can make</small><b class="up">${rs(W.max_profit)}</b></div><div><small>Most it can lose</small><b class="down">${rs(-W.max_loss)}</b></div></div>`+
+    `<div class="calc"><label>NIFTY at 3:15 pm on entry day<input type="number" id="nifty" step="0.05" inputmode="decimal" placeholder="${W.spot.toFixed(2)}"></label><p id="calcnote">Type NIFTY's level at 3:15 pm and the strikes update. Prices update only in Kite.</p></div>`;
+}
+$('#slip').innerHTML=slipFor();
+const inp=$('#nifty');
+if(inp)inp.addEventListener('input',()=>{const U=+inp.value;if(!U)return;const s=strikesAt(U),ks=[[s.call,'CE','protection above'],[s.put,'PE','protection below'],[s.atm,'CE','at the money'],[s.atm,'PE','at the money']];
+  document.querySelectorAll('[data-leg]').forEach((el,i)=>el.innerHTML=`${inr(ks[i][0])} ${ks[i][1]}<small>${ks[i][2]}</small>`);
+  document.querySelectorAll('[data-px]').forEach(el=>el.innerHTML='in Kite<b>–</b>');$('#slipU').textContent=`NIFTY ${inr(U,2)}`;
+  $('#calcnote').textContent=`Strikes for NIFTY ${inr(U,2)}: nearest 50 to the level and to 4% above and below it. Check the credit and margin in Kite before placing.`;});
+// ---- tested ----
+const T=L.tested,row=(r,me)=>`<tr${me?' class="me"':''}><td>${esc(r.period)}</td><td class="r"><b class="${cls(r.profit)}">${rs(r.profit)}</b></td><td class="r">${rs(r.worst_week)}</td><td class="r">${rs(r.worst_fall)}</td></tr>`;
+$('#tested').innerHTML=`<h3 style="font-size:16px">Tested on Stockmock's minute data, 1 lot</h3><table style="margin-top:8px"><thead><tr><th>Period</th><th class="r">Profit</th><th class="r">Worst week</th><th class="r">Worst fall</th></tr></thead><tbody>
+  <tr><td colspan="4" style="font-weight:600;border-top:0">This trade, with the 4% protective buys (margin about ₹1.56 lakh)</td></tr>${T.stockmock.map(r=>row(r,1)).join('')}
+  <tr><td colspan="4" style="font-weight:600">The same without protective buys (margin about ₹2.65 lakh), for comparison</td></tr>${T.unhedged.map(r=>row(r,0)).join('')}</tbody></table>
+  <p class="note">About ₹1 lakh profit per lot in each 4-year period, or 16–17% a year on the margin, with 56–60% of weeks profitable. The worst fall is the largest drop from a high point before recovering, so keep well above the margin in the account. A separate test on 15 years of NSE daily data found weekly selling 2 days before expiry held up from 2019; monthly selling and option buying did not.</p>`;
+// ---- live ----
+const R=(L.record||[]).slice().reverse(),tot=R.reduce((a,r)=>a+r.pnl_rupees,0);
+$('#live').innerHTML=`<h3 style="font-size:16px">Live record since ${dlong(L.live_since)}</h3><p class="note" style="margin-top:4px">Every week from launch, worked out at NSE closing prices on the entry day and expiry day, after costs. ${R.length?`${R.length} weeks: ${R.filter(r=>r.pnl_rupees>0).length} profitable, total <b class="${cls(tot)}">${rs(tot)}</b> per lot.`:'The first week appears here after its expiry.'}</p>`+
+ (R.length?`<table style="margin-top:8px"><thead><tr><th>Expiry</th><th class="r">NIFTY at entry → expiry</th><th class="r">Strikes</th><th class="r">Result per lot</th></tr></thead><tbody>${R.map(r=>`<tr><td>${dlong(r.expiry)}</td><td class="r">${inr(r.spot_entry)} → ${inr(r.spot_expiry)}</td><td class="r">${inr(r.wings[0])} / ${inr(r.atm)} / ${inr(r.wings[1])}</td><td class="r"><b class="${cls(r.pnl_rupees)}">${rs(r.pnl_rupees)}</b></td></tr>`).join('')}</tbody></table>`:'');
+})();
+</script>
+</body>
+</html>

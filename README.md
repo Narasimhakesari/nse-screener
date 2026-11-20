@@ -1,6 +1,10 @@
-# NIFTY weekly trade
+# NSE Stock Agent
 
-The site (index.html) shows one tested NIFTY weekly options trade, updated every weekday evening by
+The home page (index.html) scores every actively traded NSE stock after each close on six things: momentum, trend, company results, seasonality, news and swing setups, and lists the 10 best. It is rebuilt every weekday at 8:37 pm IST by `.github/workflows/refresh.yml` (`build/build.py` -> `data.json`, `build/news_fund.py` -> `auto.json`). Over 20 years (2007–2026), holding the monthly top 10 by the momentum score made 24.1% a year against 10.1% for the market, with a worst fall of 77% (`long_log.txt`). stocks.html now redirects to the home page.
+
+## NIFTY weekly trade (paused)
+
+options.html shows one tested NIFTY weekly options trade, updated every weekday evening by
 `.github/workflows/options_daily.yml` from NSE's daily F&O file (`build/options_daily.py` -> `options_live.json`).
 
 **The trade.** On the 2nd trading day before each NIFTY weekly expiry, at about 3:15 pm: buy a call about 4% above
@@ -33,7 +37,7 @@ Not investment advice.
 Alerts: `build/options_notify.py` messages the evening before the entry day, on the entry evening and on expiry
 evening, using the repository secrets below.
 
-The stock momentum page (stocks.html) is live again from 20 Nov 2026, refreshed by `.github/workflows/refresh.yml` every weekday at 8:37 pm IST. It shows every buy signal (including ones beyond the 5 trade slots) and the full momentum ranking. Its rule failed the 20-year test (`build/backtest_20y.py`, `long_log.txt`), and the page says so.
+The fresh-entry trade rule (new top-50 entries, +20% / −8%, 30 days) failed the 20-year test (`build/backtest_20y.py`, `long_log.txt`); `build/notify.py` still records it in `history.json` and sends its alerts if the secrets are set.
 
 ## Alerts (optional)
 `build/notify.py` records every trade the page signals in `history.json` (the page's live record). It sends a message on evenings with something to do:
@@ -46,7 +50,7 @@ It also sends a message when the market mood changes and a summary every Friday.
 - Or the free ntfy app: `NTFY_TOPIC`, any long private name you also subscribe to in the app.
 
 ## Files
-- `index.html`: the page.
+- `index.html`: the stock scores page. `options.html`: the paused NIFTY options page.
 - `data.json`: prices, indicators, factor scores, seasonality and evidence tests. Rebuilt every weekday.
 - `static.json`: backtest report, news notes and fundamentals.
 - `build/build.py`: rebuilds `data.json` from NSE's daily files (keeps about 5 years in `wd/bhav`).
