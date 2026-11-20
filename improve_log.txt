@@ -19,7 +19,7 @@ Market filter on the 50-day average                              18.1% worst  -5
 100-day filter, review every 10 trading days                     17.5% worst  -41.1% sharpe 0.93 | periods [np.float64(19.9), np.float64(9.6), np.float64(15.6), np.float64(21.6)] | beats baseline in 1/4
 Half the stocks (not cash) below the 200-day average             24.2% worst  -56.1% sharpe 1.05 | periods [np.float64(13.2), np.float64(22.6), np.float64(33.4), np.float64(29.2)] | beats baseline in 3/4
 No market filter                                                 25.5% worst  -69.1% sharpe 1.00 | periods [np.float64(9.6), np.float64(27.9), np.float64(32.4), np.float64(33.1)] | beats baseline in 3/4
-Momentum: 12- and 6-month blend                                  17.9% worst  -52.7% sharpe 0.88 | periods [np.float64(17.2), np.float64(12.7), np.float64(25.4), np.float64(18.7)] | beats baseline in 1/4
+Momentum: 12- and 6-month blend                                  18.0% worst  -52.7% sharpe 0.88 | periods [np.float64(17.4), np.float64(12.7), np.float64(25.4), np.float64(18.7)] | beats baseline in 1/4
 Momentum: plain 12-month return                                  19.4% worst  -45.3% sharpe 0.87 | periods [np.float64(18.9), np.float64(8.3), np.float64(34.6), np.float64(21.3)] | beats baseline in 2/4
 Trailing stop 15%                                                13.4% worst  -41.5% sharpe 0.80 | periods [np.float64(6.8), np.float64(12.7), np.float64(21.6), np.float64(15.1)] | beats baseline in 0/4
 Trailing stop 20%                                                15.6% worst  -41.2% sharpe 0.87 | periods [np.float64(10.0), np.float64(12.9), np.float64(23.8), np.float64(18.9)] | beats baseline in 0/4
